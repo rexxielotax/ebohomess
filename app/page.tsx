@@ -6,7 +6,12 @@ import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { ListingCard } from '@/components/listing-card'
 import { FilterPanel, Filters } from '@/components/filter-panel'
-import { MapPlaceholder } from '@/components/map-placeholder'
+import dynamic from 'next/dynamic'
+
+const MapPlaceholder = dynamic(
+  () => import('@/components/map-placeholder').then(mod => ({ default: mod.MapPlaceholder })),
+  { ssr: false }
+)
 import { MOCK_LISTINGS, Listing } from '@/lib/mock-data'
 import { Button } from '@/components/ui/button'
 
