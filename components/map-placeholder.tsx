@@ -1,12 +1,14 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import 'leaflet/dist/leaflet.css'
 
 interface MapPlaceholderProps {
   height?: string
   showPins?: boolean
   onPinClick?: (id: string) => void
   highlightedPin?: string
+  onLocationSelect?: (lat: number, lng: number) => void
 }
 
 const PINS = [
@@ -21,49 +23,72 @@ const PINS = [
 export function MapPlaceholder({
   height = 'h-96',
   onPinClick,
+  onLocationSelect,
 }: MapPlaceholderProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
-useEffect(() => {
-  if (!mapRef.current) return;
 
-  // If map already exists, don't reinitialize
-  if (mapInstanceRef.current) return;
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!mapRef.current) return
+    if (mapInstanceRef.current) return
 
-  import('leaflet').then((L) => {
-    if (!mapRef.current) return;
-    if (mapInstanceRef.current) return;
+    import('leaflet').then((L) => {
+      if (!mapRef.current) return
+      if (mapInstanceRef.current) return
 
-    const map = L.map(mapRef.current).setView([6.3249, 8.1137], 11);
+      const map = L.map(mapRef.current).setView([6.3249, 8.1137], 11)
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-    }).addTo(map);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+      }).addTo(map)
 
-    const icon = L.divIcon({
-      className: '',
-      html: <div style="width:24px;height:24px;background:#2D6A4F;border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;"></div>,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-    });
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:24px;height:24px;background:#2D6A4F;border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);cursor:pointer;"></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      })
 
-    PINS.forEach((pin) => {
-      const marker = L.marker([pin.lat, pin.lng], { icon })
-        .addTo(map)
-        .bindTooltip(pin.label, { permanent: false });
-      marker.on('click', () => onPinClick?.(pin.id));
-    });
+      PINS.forEach((pin) => {
+        const marker = L.marker([pin.lat, pin.lng], { icon })
+          .addTo(map)
+          .bindTooltip(pin.label, { permanent: false })
+        marker.on('click', () => onPinClick?.(pin.id))
+      })
 
-    mapInstanceRef.current = map;
-  });
+      if (onLocationSelect) {
+        const dropIcon = L.divIcon({
+          className: '',
+          html: `<div style="width:20px;height:20px;background:#16a34a;border:2px solid white;border-radius:50%;"></div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10],
+        })
 
-  return () => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
+        let dropMarker: any = null
+
+        map.on('click', (e: any) => {
+          const { lat, lng } = e.latlng
+          if (dropMarker) dropMarker.remove()
+          dropMarker = L.marker([lat, lng], { icon: dropIcon }).addTo(map)
+          onLocationSelect(lat, lng)
+        })
+      }
+
+      mapInstanceRef.current = map
+
+      setTimeout(() => {
+        map.invalidateSize()
+      }, 100)
+    })
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove()
+        mapInstanceRef.current = null
+      }
     }
-  };
-}, []);
+  }, [])
 
   return (
     <div

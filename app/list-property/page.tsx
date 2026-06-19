@@ -1,5 +1,5 @@
 'use client'
-
+import { supabase } from '@/lib/supabase'
 import { useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, Upload, Check, MapPin } from 'lucide-react'
@@ -55,14 +55,32 @@ export default function ListPropertyPage() {
       annualRent: monthly ? String(Number(monthly) * 12) : '',
     }))
   }
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Simulate form submission
-    setTimeout(() => {
-      setStep('success')
-    }, 800)
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { error } = await supabase.from('listings').insert({
+    landlord_id: user?.id ?? null,
+    title: `${formData.bedrooms} bed ${formData.propertyType} in ${formData.location}`,
+    price_monthly: Number(formData.monthlyRent),
+    location_text: formData.location,
+    property_type: formData.propertyType,
+    bedrooms: Number(formData.bedrooms),
+    amenities: formData.amenities,
+    photos: photos,
+    contact_info: formData.phoneNumber,
+    availability_date: formData.availabilityDate || null,
+  })
+
+  if (error) {
+    console.error('Listing error:', error)
+    alert('Failed to submit listing: ' + error.message)
+    return
   }
+
+  setStep('success')
+}
 
   if (step === 'success') {
     return (
