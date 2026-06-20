@@ -24,15 +24,56 @@ export default function ListPropertyPage() {
   })
   const [showMapModal, setShowMapModal] = useState(false)
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (files) {
-      const newPhotos = Array.from(files)
-        .slice(0, 10 - photos.length)
-        .map((file) => URL.createObjectURL(file))
-      setPhotos([...photos, ...newPhotos])
+const [uploading, setUploading] = useState(false)
+const [ownershipDoc, setOwnershipDoc] = useState('')
+const [docUploading, setDocUploading] = useState(false)
+
+const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+
+  setDocUploading(true)
+  const data = new FormData()
+  data.append('file', file)
+  data.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!)
+
+  const res = await fetch(
+  `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
+  { method: 'POST', body: data }
+)
+  const json = await res.json()
+  if (json.secure_url) {
+    setOwnershipDoc(json.secure_url)
+  }
+  setDocUploading(false)
+}
+
+const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = e.target.files
+  if (!files) return
+
+  setUploading(true)
+  const filesToUpload = Array.from(files).slice(0, 10 - photos.length)
+
+  const uploadedUrls: string[] = []
+
+  for (const file of filesToUpload) {
+    const data = new FormData()
+    data.append('file', file)
+    data.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!)
+const res = await fetch(
+  `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+  { method: 'POST', body: data }
+)
+    const json = await res.json()
+    if (json.secure_url) {
+      uploadedUrls.push(json.secure_url)
     }
   }
+
+  setPhotos([...photos, ...uploadedUrls])
+  setUploading(false)
+}
 
   const removePhoto = (index: number) => {
     setPhotos(photos.filter((_, i) => i !== index))
@@ -133,25 +174,50 @@ const handleSubmit = async (e: React.FormEvent) => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-8">
+                 {/* Ownership Verification Section */}
+            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+              <h2 className="text-xl font-bold text-red-600">Proof of Ownership</h2>
+              <p className="text-sm text-muted-foreground">
+                Upload a document showing you own or manage this property (land title, C of O, deed, or tenancy agreement). This helps us verify listings and keep EboHomes scam-free.
+              </p>
+
+              <label className="block border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:bg-secondary transition-colors">
+                {docUploading ? (
+                  <p className="text-sm text-primary">Uploading document...</p>
+                ) : ownershipDoc ? (
+                  <p className="font-semibold text-foreground">✅ Document uploaded — you can replace it by clicking again</p>
+                ) : (
+                  <p className="font-semibold text-foreground">📄 Click to upload ownership document</p>
+                )}
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleDocUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
             {/* Photos Section */}
             <div className="bg-card border border-border rounded-lg p-6">
               <h2 className="text-xl font-bold text-foreground mb-4">Property Photos (up to 10)</h2>
 
               {/* Upload Area */}
-              {photos.length < 10 && (
-                <label className="block border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:bg-secondary transition-colors mb-4">
-                  <Upload size={32} className="mx-auto text-muted-foreground mb-2" />
-                  <p className="font-semibold text-foreground">Click to upload photos</p>
-                  <p className="text-sm text-muted-foreground">or drag and drop</p>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                </label>
-              )}
+        {photos.length < 10 && (
+  <label className="block border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:bg-secondary transition-colors mb-4">
+    <Upload size={32} className="mx-auto text-muted-foreground mb-2" />
+    <p className="font-semibold text-foreground">Click to upload photos</p>
+    <p className="text-sm text-muted-foreground">or drag and drop</p>
+    {uploading && <p className="text-sm text-primary mt-2">Uploading photos...</p>}
+    <input
+      type="file"
+      multiple
+      accept="image/*"
+      onChange={handlePhotoUpload}
+      className="hidden"
+    />
+  </label>
+)}
 
               {/* Photo Thumbnails */}
               {photos.length > 0 && (
@@ -287,6 +353,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             </div>
 
+       
             {/* Contact Section */}
             <div className="bg-card border border-border rounded-lg p-6 space-y-4">
               <h2 className="text-xl font-bold text-foreground">Contact Information</h2>
@@ -347,7 +414,12 @@ const handleSubmit = async (e: React.FormEvent) => {
                 ×
               </button>
             </div>
-            <MapPlaceholder height="h-80" />
+          <MapPlaceholder
+  height="h-80"
+  onLocationSelect={(lat, lng) => {
+    setFormData((prev) => ({ ...prev, lat, lng }))
+  }}
+/>
             <div className="p-4 border-t border-border flex gap-3">
               <Button
                 onClick={() => setShowMapModal(false)}

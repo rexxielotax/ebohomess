@@ -4,15 +4,32 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sun, Moon } from 'lucide-react'
 import { Button } from './ui/button'
+import { supabase } from '@/lib/supabase'
 
 export function Header() {
   const [isDark, setIsDark] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [role, setRole] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
     const isDarkMode = document.documentElement.classList.contains('dark')
     setIsDark(isDarkMode)
+
+    const fetchRole = async () => {
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData?.user?.id
+      if (!userId) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single()
+
+      setRole(profile?.role ?? null)
+    }
+    fetchRole()
   }, [])
 
   const toggleDarkMode = () => {

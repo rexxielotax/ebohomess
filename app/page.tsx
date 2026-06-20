@@ -12,12 +12,13 @@ const MapPlaceholder = dynamic(
   () => import('@/components/map-placeholder').then(mod => ({ default: mod.MapPlaceholder })),
   { ssr: false }
 )
-import { MOCK_LISTINGS, Listing } from '@/lib/mock-data'
+import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 
 export default function HomePage() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [listings, setListings] = useState<Listing[]>(MOCK_LISTINGS)
+  const [listings, setListings] = useState<any[]>([])
+const [allListings, setAllListings] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showMap, setShowMap] = useState(false)
   const [activeFilters, setActiveFilters] = useState<Filters>({
@@ -31,36 +32,46 @@ export default function HomePage() {
   const [highlightedListingId, setHighlightedListingId] = useState<string>()
   const listingsRef = useRef<HTMLDivElement>(null)
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
+useEffect(() => {
+  const fetchListings = async () => {
     setIsLoading(true)
-    // Simulate search delay
-    setTimeout(() => {
-      const filtered = MOCK_LISTINGS.filter((listing) =>
-        listing.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.neighborhood.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      setListings(filtered)
-      setIsLoading(false)
-    }, 300)
+    const { data } = await supabase
+      .from('listings')
+      .select('*')
+      .order('created_at', { ascending: false })
+    setAllListings(data || [])
+    setListings(data || [])
+    setIsLoading(false)
   }
+  fetchListings()
+}, [])
+
+const handleSearch = (e: React.FormEvent) => {
+  e.preventDefault()
+  setIsLoading(true)
+  setTimeout(() => {
+    const filtered = allListings.filter((listing) =>
+      listing.location_text?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    setListings(filtered)
+    setIsLoading(false)
+  }, 300)
+}
 
   const handleApplyFilters = (filters: Filters) => {
-    setActiveFilters(filters)
-    setIsLoading(true)
+  setActiveFilters(filters)
+  setIsLoading(true)
 
-    setTimeout(() => {
-      let filtered = MOCK_LISTINGS
+  setTimeout(() => {
+    let filtered = allListings
 
       // Apply search term
-      if (searchTerm) {
+     if (searchTerm) {
         filtered = filtered.filter(
           (listing) =>
-            listing.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            listing.neighborhood.toLowerCase().includes(searchTerm.toLowerCase())
+            listing.location_text?.toLowerCase().includes(searchTerm.toLowerCase())
         )
       }
-
       // Apply price filter
       filtered = filtered.filter(
         (listing) => listing.price_monthly >= filters.minPrice && listing.price_monthly <= filters.maxPrice
@@ -230,7 +241,7 @@ BEST PLACE TO FIND YOUR HOME IN EBONYI STATE
                         amenities: [],
                       })
                       setActiveFilterCount(0)
-                      setListings(MOCK_LISTINGS)
+                      setListings(allListings)
                     }}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                   >
@@ -249,10 +260,10 @@ BEST PLACE TO FIND YOUR HOME IN EBONYI STATE
                     >
                       <ListingCard
                         id={listing.id}
-                        image={listing.image}
+                        image={listing.photos?.[0] ?? ''}
                         price_monthly={listing.price_monthly}
                         price_yearly={listing.price_yearly}
-                        location={listing.location}
+                        location={listing.location_text}
                         property_type={listing.property_type}
                         bedrooms={listing.bedrooms}
                         verified={listing.verified}
@@ -315,7 +326,7 @@ BEST PLACE TO FIND YOUR HOME IN EBONYI STATE
                           amenities: [],
                         })
                         setActiveFilterCount(0)
-                        setListings(MOCK_LISTINGS)
+                        setListings(allListings)
                       }}
                       className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                     >
@@ -328,10 +339,10 @@ BEST PLACE TO FIND YOUR HOME IN EBONYI STATE
                       <div key={listing.id} data-listing-id={listing.id}>
                         <ListingCard
                           id={listing.id}
-                          image={listing.image}
+                          image={listing.photos?.[0] ?? ''}
                           price_monthly={listing.price_monthly}
                           price_yearly={listing.price_yearly}
-                          location={listing.location}
+                          location={listing.location_text}
                           property_type={listing.property_type}
                           bedrooms={listing.bedrooms}
                           verified={listing.verified}

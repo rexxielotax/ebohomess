@@ -1,322 +1,96 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { ChevronLeft, Phone, MessageCircle, Share2, MapPin, Bed, Droplet, Zap, ParkingCircle, Shield, Wifi, Leaf, Star, CheckCircle, Copy } from 'lucide-react'
-import { Header } from '@/components/header'
-import { Footer } from '@/components/footer'
-import { VerifiedBadge } from '@/components/badges'
-import { MapPlaceholder } from '@/components/map-placeholder'
-import { MOCK_LISTINGS } from '@/lib/mock-data'
-import { Button } from '@/components/ui/button'
-
-const AMENITY_ICONS: Record<string, any> = {
-  water: Droplet,
-  generator: Zap,
-  parking: ParkingCircle,
-  security: Shield,
-  internet: Wifi,
-  garden: Leaf,
-}
+'use client';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useParams } from 'next/navigation';
 
 export default function ListingDetailPage() {
-  const params = useParams()
-  const id = params?.id as string
-  const listing = MOCK_LISTINGS.find((l) => l.id === id)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [copied, setCopied] = useState(false)
+  const { id } = useParams();
+  const [listing, setListing] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentPhoto, setCurrentPhoto] = useState(0);
 
-  if (!listing) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-foreground mb-2">Listing not found</h1>
-            <Link href="/" className="text-primary hover:underline">
-              ← Back to search
-            </Link>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    )
-  }
+  useEffect(() => {
+    const fetchListing = async () => {
+      const { data } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('id', id)
+        .single();
+      setListing(data);
+      setLoading(false);
+    };
+    if (id) fetchListing();
+  }, [id]);
 
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % listing.gallery.length)
-  }
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + listing.gallery.length) % listing.gallery.length)
-  }
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(window.location.href)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const hasEnoughReviews = listing.landlord_reviews >= 3
+  if (loading) return <div style={{ padding: 40 }}>Loading...</div>;
+  if (!listing) return <div style={{ padding: 40 }}>Listing not found.</div>;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>
+      <a href="/search" style={{ color: '#16a34a', textDecoration: 'none', fontSize: 14 }}>← Back to Search</a>
 
-      <main className="flex-1">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Back Button */}
-          <Link href="/" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium mb-6">
-            <ChevronLeft size={20} />
-            Back to search
-          </Link>
-
-          {/* Gallery */}
-          <div className="relative h-96 md:h-[500px] bg-muted rounded-lg overflow-hidden mb-8 card-shadow border border-border">
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `url('${listing.gallery[currentImageIndex]}')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            />
-
-            {/* Navigation Arrows */}
-            {listing.gallery.length > 1 && (
-              <>
-                <button
-                  onClick={prevImage}
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors z-10"
-                  aria-label="Previous image"
-                >
-                  <ChevronLeft size={24} />
-                </button>
-                <button
-                  onClick={nextImage}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors z-10"
-                  aria-label="Next image"
-                >
-                  <ChevronLeft size={24} className="rotate-180" />
-                </button>
-
-                {/* Image Counter */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium">
-                  {currentImageIndex + 1} / {listing.gallery.length}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Price and Title */}
-          <div className="mb-8">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">{listing.property_type}</h1>
-                <p className="text-lg text-primary font-semibold">
-                  ₦{listing.price_monthly.toLocaleString()}/month
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  ₦{listing.price_yearly.toLocaleString()}/year
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    navigator.share?.({
-                      title: listing.property_type,
-                      url: window.location.href,
-                    })
-                  }}
-                  className="p-3 hover:bg-secondary rounded-lg transition-colors"
-                  aria-label="Share listing"
-                >
-                  <Share2 size={20} className="text-foreground" />
-                </button>
-              </div>
+      {listing.photos?.length > 0 ? (
+        <div style={{ marginTop: 16 }}>
+          <img src={listing.photos[currentPhoto]} alt="photo" style={{ width: '100%', height: 380, objectFit: 'cover', borderRadius: 12 }} />
+          {listing.photos.length > 1 && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, overflowX: 'auto' }}>
+              {listing.photos.map((url: string, i: number) => (
+                <img key={i} src={url} alt="thumb" onClick={() => setCurrentPhoto(i)}
+                  style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, cursor: 'pointer', border: i === currentPhoto ? '2px solid #16a34a' : 'none' }} />
+              ))}
             </div>
-
-            {/* Location */}
-            <div className="flex items-center gap-2 text-muted-foreground mb-4">
-              <MapPin size={20} />
-              <span>{listing.location}</span>
-            </div>
-
-            {/* Property Details */}
-            <div className="flex items-center gap-6 text-foreground">
-              <div className="flex items-center gap-2">
-                <Bed size={20} />
-                <span className="font-medium">{listing.bedrooms} bed{listing.bedrooms !== 1 ? 's' : ''}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column */}
-            <div className="lg:col-span-2 space-y-8">
-              {/* Description */}
-              <section>
-                <h2 className="text-2xl font-bold text-foreground mb-4">About</h2>
-                <p className="text-foreground leading-relaxed">{listing.description}</p>
-              </section>
-
-              {/* Amenities */}
-              <section>
-                <h2 className="text-2xl font-bold text-foreground mb-4">Amenities</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {listing.amenities.map((amenity) => {
-                    const IconComponent = AMENITY_ICONS[amenity] || MapPin
-                    return (
-                      <div key={amenity} className="flex items-center gap-3 p-3 bg-card border border-border rounded-lg">
-                        <IconComponent size={20} className="text-primary flex-shrink-0" />
-                        <span className="text-sm font-medium text-foreground capitalize">{amenity}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </section>
-
-              {/* Location Map */}
-              <section>
-                <h2 className="text-2xl font-bold text-foreground mb-4">Location</h2>
-                <div className="rounded-lg overflow-hidden card-shadow border border-border">
-                  <MapPlaceholder height="h-80" />
-                </div>
-              </section>
-            </div>
-
-            {/* Right Column - Landlord Info & Contact */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Landlord Card */}
-              <div className="bg-card border border-border rounded-lg p-6">
-                <h3 className="text-lg font-bold text-foreground mb-4">Landlord</h3>
-
-                {/* Landlord Name */}
-                <div className="mb-4 pb-4 border-b border-border">
-                  <p className="text-foreground font-semibold">{listing.landlord_name}</p>
-                  {listing.landlord_verified && <VerifiedBadge />}
-                </div>
-
-                {/* Rating Section */}
-                {hasEnoughReviews ? (
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            size={16}
-                            className={
-                              i < Math.floor(listing.landlord_rating!) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'
-                            }
-                          />
-                        ))}
-                      </div>
-                      <span className="font-semibold text-foreground">{listing.landlord_rating?.toFixed(1)}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{listing.landlord_reviews} review{listing.landlord_reviews !== 1 ? 's' : ''}</p>
-                  </div>
-                ) : (
-                  <div className="mb-6 p-3 bg-secondary rounded-lg">
-                    <p className="text-sm text-foreground">
-                      <span className="font-semibold">New landlord</span> — not enough reviews yet
-                    </p>
-                  </div>
-                )}
-
-                {/* Contact Buttons */}
-                <div className="space-y-3">
-                  <a
-                    href={`tel:${listing.landlord_phone}`}
-                    className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-4 rounded-lg transition-colors"
-                  >
-                    <Phone size={18} />
-                    Call Landlord
-                  </a>
-                  <button
-                    onClick={() => {
-                      // WhatsApp link
-                      const message = `Hi, I&apos;m interested in the ${listing.property_type} in ${listing.location}.`
-                      const whatsappUrl = `https://wa.me/${listing.landlord_phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
-                      window.open(whatsappUrl, '_blank')
-                    }}
-                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-                  >
-                    <MessageCircle size={18} />
-                    WhatsApp
-                  </button>
-                </div>
-              </div>
-
-              {/* Availability */}
-              {listing.availability_date && (
-                <div className="bg-card border border-border rounded-lg p-6">
-                  <h3 className="text-lg font-bold text-foreground mb-2">Availability</h3>
-                  <p className="text-foreground">
-                    Available from{' '}
-                    <span className="font-semibold">
-                      {new Date(listing.availability_date).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              {/* Share Section */}
-              <div className="bg-card border border-border rounded-lg p-6">
-                <h3 className="text-lg font-bold text-foreground mb-4">Share</h3>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      const text = `Check out this ${listing.property_type} in ${listing.location} - ₦${listing.price_monthly.toLocaleString()}/month`
-                      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + window.location.href)}`
-                      window.open(whatsappUrl, '_blank')
-                    }}
-                    className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-3 rounded-lg transition-colors"
-                  >
-                    <MessageCircle size={18} />
-                    WhatsApp
-                  </button>
-                  <button
-                    onClick={copyToClipboard}
-                    className="flex-1 flex items-center justify-center gap-2 bg-secondary hover:bg-muted text-foreground font-medium py-2 px-3 rounded-lg transition-colors"
-                  >
-                    <Copy size={18} />
-                    {copied ? 'Copied!' : 'Copy Link'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
-      </main>
+      ) : (
+        <div style={{ width: '100%', height: 380, background: '#f3f4f6', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', marginTop: 16 }}>No Photos</div>
+      )}
 
-      <Footer />
+      <div style={{ marginTop: 24 }}>
+        <h1 style={{ margin: '0 0 8px' }}>{listing.title}</h1>
+        <p style={{ color: '#6b7280', margin: '0 0 8px' }}>📍 {listing.location_text}</p>
+        <p style={{ fontSize: 24, fontWeight: 'bold', color: '#16a34a', margin: '0 0 16px' }}>₦{listing.price_monthly?.toLocaleString()}/month</p>
 
-      {/* Fixed Bottom Contact Bar (Mobile) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border md:hidden p-4 flex gap-3">
-        <button className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-4 rounded-lg transition-colors">
-          <Phone size={18} />
-          Call
-        </button>
-        <button
-          onClick={() => {
-            const message = `Hi, I&apos;m interested in the ${listing.property_type} in ${listing.location}.`
-            const whatsappUrl = `https://wa.me/${listing.landlord_phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
-            window.open(whatsappUrl, '_blank')
-          }}
-          className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-        >
-          <MessageCircle size={18} />
-          Message
-        </button>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+          {listing.property_type && <span style={{ background: '#f3f4f6', padding: '4px 12px', borderRadius: 20, fontSize: 14 }}>{listing.property_type}</span>}
+          {listing.bedrooms && <span style={{ background: '#f3f4f6', padding: '4px 12px', borderRadius: 20, fontSize: 14 }}>{listing.bedrooms} Bedrooms</span>}
+          {listing.availability_date && <span style={{ background: '#dcfce7', padding: '4px 12px', borderRadius: 20, fontSize: 14 }}>Available: {listing.availability_date}</span>}
+        </div>
+
+        {listing.description && (
+          <div style={{ marginBottom: 16 }}>
+            <h3>Description</h3>
+            <p style={{ color: '#374151', lineHeight: 1.6 }}>{listing.description}</p>
+          </div>
+        )}
+
+        {listing.amenities?.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <h3>Amenities</h3>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {listing.amenities.map((a: string) => (
+                <span key={a} style={{ background: '#dcfce7', color: '#16a34a', padding: '4px 12px', borderRadius: 20, fontSize: 14 }}>✓ {a}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ background: '#f9fafb', borderRadius: 12, padding: 20, marginBottom: 24 }}>
+          <h3 style={{ margin: '0 0 12px' }}>Contact Landlord</h3>
+          <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 16px' }}>Interested in this property? Contact the landlord directly.</p>
+          <a href={`tel:${listing.contact_phone}`}
+            style={{ display: 'block', width: '100%', padding: 14, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>
+            📞 Call Landlord
+          </a>
+          <button
+            onClick={() => {
+              const text = `Hi, I found your listing on EboHomes: ${listing.title} in ${listing.location_text}. Is it still available?`;
+              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
+            }}
+            style={{ display: 'block', width: '100%', padding: 14, background: '#25d366', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, cursor: 'pointer', marginTop: 8 }}>
+            💬 WhatsApp Landlord
+          </button>
+        </div>
       </div>
-      <div className="md:hidden h-20" />
     </div>
-  )
+  );
 }

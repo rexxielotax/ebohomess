@@ -33,7 +33,22 @@ export default function LoginPage() {
       if (error) {
         setMessage(error.message);
       } else {
-        router.push('/dashboard');
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData?.user?.id;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, verification_status')
+          .eq('id', userId)
+          .single();
+
+        if (profile?.role === 'tenant') {
+          router.push('/');
+        } else if (profile?.role === 'landlord') {
+          router.push('/list-property');
+        } else {
+          router.push('/dashboard');
+        }
       }
     }
     setLoading(false);
