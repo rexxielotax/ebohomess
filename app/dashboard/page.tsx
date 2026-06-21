@@ -50,7 +50,7 @@ export default function DashboardPage() {
           <p style={{ color: '#6b7280', margin: '4px 0 0' }}>{user?.email}</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <Link href="/add-listing"
+          <Link href="/list-property"
             style={{ padding: '10px 20px', background: '#16a34a', color: '#fff', borderRadius: 8, textDecoration: 'none', fontSize: 14 }}>
             + Add Listing
           </Link>
@@ -66,7 +66,7 @@ export default function DashboardPage() {
       {listings.length === 0 && (
         <div style={{ textAlign: 'center', padding: 60, color: '#6b7280' }}>
           <p>You have no listings yet.</p>
-          <Link href="/add-listing" style={{ color: '#16a34a' }}>Add your first listing →</Link>
+          <Link href="/list-property" style={{ color: '#16a34a' }}>Add your first listing →</Link>
         </div>
       )}
 

@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Sun, Moon } from 'lucide-react'
 import { Button } from './ui/button'
 import { supabase } from '@/lib/supabase'
 
 export function Header() {
+  const router = useRouter()
   const [isDark, setIsDark] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [role, setRole] = useState<string | null>(null)
@@ -37,6 +39,14 @@ export function Header() {
     const html = document.documentElement
     html.classList.toggle('dark')
     setIsDark(!isDark)
+  }
+const handleListClick = async () => {
+    const { data: userData } = await supabase.auth.getUser()
+    if (!userData?.user) {
+      router.push('/login')
+      return
+    }
+    router.push('/list-property')
   }
 
   const scrollToSection = (sectionId: string) => {
@@ -112,18 +122,18 @@ export function Header() {
 
             {/* List Your Property Button */}
             <Button
-              asChild
+              onClick={handleListClick}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold hidden sm:inline-flex"
             >
-              <Link href="/list-property">List Your Property</Link>
+              List Your Property
             </Button>
 
             {/* Mobile Menu Button */}
             <Button
-              asChild
+              onClick={handleListClick}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold sm:hidden h-9 px-3 text-sm"
             >
-              <Link href="/list-property">List</Link>
+              List
             </Button>
           </div>
         </div>
