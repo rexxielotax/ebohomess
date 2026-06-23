@@ -27,6 +27,7 @@ export default function ListPropertyPage() {
 const [uploading, setUploading] = useState(false)
 const [ownershipDoc, setOwnershipDoc] = useState('')
 const [docUploading, setDocUploading] = useState(false)
+const [docName, setDocName] = useState('')
 
 const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0]
@@ -36,16 +37,25 @@ const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const data = new FormData()
   data.append('file', file)
   data.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!)
-
+  console.log('Cloud name:', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME)
+  console.log('Upload preset:', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET)
   const res = await fetch(
-  `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
-  { method: 'POST', body: data }
-)
+    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
+    { method: 'POST', body: data }
+  )
   const json = await res.json()
+  
+  console.log('Cloudinary doc response:', json)
   if (json.secure_url) {
     setOwnershipDoc(json.secure_url)
+    setDocName(file.name)
   }
   setDocUploading(false)
+}
+
+const removeDoc = () => {
+  setOwnershipDoc('')
+  setDocName('')
 }
 
 const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,10 +109,17 @@ const res = await fetch(
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  console.log('Current user:', userData?.user)
+  console.log('User error:', userError)
+
+  if (!userData?.user) {
+    alert('You must be logged in to submit a listing. Please log in and try again.')
+    return
+  }
 
   const { error } = await supabase.from('listings').insert({
-    landlord_id: user?.id ?? null,
+    landlord_id: userData.user.id,
     title: `${formData.bedrooms} bed ${formData.propertyType} in ${formData.location}`,
     price_monthly: Number(formData.monthlyRent),
     location_text: formData.location,
@@ -110,6 +127,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     bedrooms: Number(formData.bedrooms),
     amenities: formData.amenities,
     photos: photos,
+    ownership_doc_url: ownershipDoc || null,
     contact_info: formData.phoneNumber,
     availability_date: formData.availabilityDate || null,
   })
@@ -122,7 +140,6 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   setStep('success')
 }
-
   if (step === 'success') {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -181,21 +198,39 @@ const handleSubmit = async (e: React.FormEvent) => {
                 Upload a document showing you own or manage this property (land title, C of O, deed, or tenancy agreement). This helps us verify listings and keep EboHomes scam-free.
               </p>
 
-              <label className="block border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:bg-secondary transition-colors">
-                {docUploading ? (
-                  <p className="text-sm text-primary">Uploading document...</p>
-                ) : ownershipDoc ? (
-                  <p className="font-semibold text-foreground">✅ Document uploaded — you can replace it by clicking again</p>
-                ) : (
-                  <p className="font-semibold text-foreground">📄 Click to upload ownership document</p>
-                )}
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={handleDocUpload}
-                  className="hidden"
-                />
-              </label>
+              {ownershipDoc ? (
+                <div className="flex items-center justify-between border-2 border-border rounded-lg p-4 bg-secondary">
+                  <a
+                    href={ownershipDoc}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-semibold text-foreground truncate flex items-center gap-2"
+                  >
+                    ✅ {docName || 'Document uploaded'}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={removeDoc}
+                    className="text-destructive font-bold px-3 py-1 hover:bg-destructive/10 rounded"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <label className="block border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:bg-secondary transition-colors">
+                  {docUploading ? (
+                    <p className="text-sm text-primary">Uploading document...</p>
+                  ) : (
+                    <p className="font-semibold text-foreground">📄 Click to upload ownership document</p>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={handleDocUpload}
+                    className="hidden"
+                  />
+                </label>
+              )}
             </div>
 
             {/* Photos Section */}
@@ -224,7 +259,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
                   {photos.map((photo, index) => (
                     <div key={index} className="relative">
-                      <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                   <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
                       <button
                         type="button"
                         onClick={() => removePhoto(index)}
