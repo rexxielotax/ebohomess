@@ -35,9 +35,10 @@ const [allListings, setAllListings] = useState<any[]>([])
 useEffect(() => {
   const fetchListings = async () => {
     setIsLoading(true)
-    const { data } = await supabase
-      .from('listings')
-      .select('*')
+ const { data } = await supabase
+  .from('listings')
+  .select('*')
+  .eq('status', 'approved')
       .order('created_at', { ascending: false })
     setAllListings(data || [])
     setListings(data || [])

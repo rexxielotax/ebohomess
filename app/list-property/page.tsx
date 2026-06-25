@@ -12,16 +12,19 @@ import { Button } from '@/components/ui/button'
 export default function ListPropertyPage() {
   const [step, setStep] = useState<'form' | 'success'>('form')
   const [photos, setPhotos] = useState<string[]>([])
-  const [formData, setFormData] = useState({
-    monthlyRent: '',
-    annualRent: '',
-    location: '',
-    propertyType: '',
-    bedrooms: '',
-    amenities: [] as string[],
-    phoneNumber: '',
-    availabilityDate: '',
-  })
+const [formData, setFormData] = useState({
+  monthlyRent: '',
+  annualRent: '',
+  location: '',
+  propertyType: '',
+  bedrooms: '',
+  amenities: [] as string[],
+  phoneNumber: '',
+  availabilityDate: '',
+  description: '',
+  lat: null as number | null,
+  lng: null as number | null,
+})
   const [showMapModal, setShowMapModal] = useState(false)
 
 const [uploading, setUploading] = useState(false)
@@ -121,6 +124,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   const { error } = await supabase.from('listings').insert({
     landlord_id: userData.user.id,
     title: `${formData.bedrooms} bed ${formData.propertyType} in ${formData.location}`,
+    description: formData.description, 
     price_monthly: Number(formData.monthlyRent),
     location_text: formData.location,
     property_type: formData.propertyType,
@@ -130,6 +134,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     ownership_doc_url: ownershipDoc || null,
     contact_info: formData.phoneNumber,
     availability_date: formData.availabilityDate || null,
+    
   })
 
   if (error) {
@@ -331,44 +336,55 @@ const handleSubmit = async (e: React.FormEvent) => {
               </button>
             </div>
 
-            {/* Property Details Section */}
-            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-              <h2 className="text-xl font-bold text-foreground">Property Details</h2>
+         {/* Property Details Section */}
+<div className="bg-card border border-border rounded-lg p-6 space-y-4">
+  <h2 className="text-xl font-bold text-foreground">Property Details</h2>
 
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Property Type *</label>
-                <select
-                  required
-                  value={formData.propertyType}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, propertyType: e.target.value }))}
-                  className="w-full bg-input border border-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select type</option>
-                  {PROPERTY_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </div>
+  <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">Property Type *</label>
+    <select
+      required
+      value={formData.propertyType}
+      onChange={(e) => setFormData((prev) => ({ ...prev, propertyType: e.target.value }))}
+      className="w-full bg-input border border-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+    >
+      <option value="">Select type</option>
+      {PROPERTY_TYPES.map((type) => (
+        <option key={type} value={type}>
+          {type}
+        </option>
+      ))}
+    </select>
+  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Number of Bedrooms *</label>
-                <select
-                  required
-                  value={formData.bedrooms}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, bedrooms: e.target.value }))}
-                  className="w-full bg-input border border-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select bedrooms</option>
-                  {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                    <option key={num} value={num}>
-                      {num} {num === 1 ? 'bedroom' : 'bedrooms'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+  <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">Number of Bedrooms *</label>
+    <select
+      required
+      value={formData.bedrooms}
+      onChange={(e) => setFormData((prev) => ({ ...prev, bedrooms: e.target.value }))}
+      className="w-full bg-input border border-border rounded-lg px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+    >
+      <option value="">Select bedrooms</option>
+      {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+        <option key={num} value={num}>
+          {num} {num === 1 ? 'bedroom' : 'bedrooms'}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <div>
+    <label className="block text-sm font-semibold text-foreground mb-2">Description</label>
+    <textarea
+      value={formData.description}
+      onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+      placeholder="Describe the property — size, condition, nearby landmarks, special features..."
+      rows={4}
+      className="w-full bg-input border border-border rounded-lg px-4 py-3 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+    />
+  </div>
+</div>
 
             {/* Amenities Section */}
             <div className="bg-card border border-border rounded-lg p-6">
@@ -454,8 +470,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   onLocationSelect={(lat, lng) => {
     setFormData((prev) => ({ ...prev, lat, lng }))
   }}
-/>
-            <div className="p-4 border-t border-border flex gap-3">
+/><div className="p-4 border-t border-border flex gap-3">
               <Button
                 onClick={() => setShowMapModal(false)}
                 variant="outline"
@@ -474,5 +489,5 @@ const handleSubmit = async (e: React.FormEvent) => {
         </div>
       )}
     </div>
-  )
+  );
 }

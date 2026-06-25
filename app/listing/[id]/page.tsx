@@ -77,14 +77,14 @@ export default function ListingDetailPage() {
         <div style={{ background: '#f9fafb', borderRadius: 12, padding: 20, marginBottom: 24 }}>
           <h3 style={{ margin: '0 0 12px' }}>Contact Landlord</h3>
           <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 16px' }}>Interested in this property? Contact the landlord directly.</p>
-          <a href={`tel:${listing.contact_phone}`}
+                    <a href={'tel:${listing.contact_info}'}
             style={{ display: 'block', width: '100%', padding: 14, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>
             📞 Call Landlord
           </a>
           <button
             onClick={() => {
               const text = `Hi, I found your listing on EboHomes: ${listing.title} in ${listing.location_text}. Is it still available?`;
-              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
+             window.open(`https://wa.me/${listing.contact_info?.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`);
             }}
             style={{ display: 'block', width: '100%', padding: 14, background: '#25d366', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, cursor: 'pointer', marginTop: 8 }}>
             💬 WhatsApp Landlord

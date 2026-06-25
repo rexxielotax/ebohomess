@@ -82,8 +82,8 @@ if (json.secure_url) setOwnershipDoc(json.secure_url);
         if (profile?.role === 'tenant') {
           router.push('/');
         } else if (profile?.role === 'landlord') {
-          if (profile?.verification_status === 'approved') {
-            router.push('/list-property');
+      if (profile?.verification_status === 'approved') {
+  router.push('/dashboard');
           } else {
             router.push('/verification-pending');
           }
