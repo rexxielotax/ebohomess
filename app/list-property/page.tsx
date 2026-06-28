@@ -8,6 +8,7 @@ import { Footer } from '@/components/footer'
 import { MapPlaceholder } from '@/components/map-placeholder'
 import { PROPERTY_TYPES, AMENITIES } from '@/lib/mock-data'
 import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/dist/client/components/navigation'
 
 export default function ListPropertyPage() {
   const [step, setStep] = useState<'form' | 'success'>('form')
@@ -142,8 +143,8 @@ const handleSubmit = async (e: React.FormEvent) => {
     alert('Failed to submit listing: ' + error.message)
     return
   }
-
-  setStep('success')
+const router = useRouter()
+  router.push('/verification-pending')
 }
   if (step === 'success') {
     return (

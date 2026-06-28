@@ -36,4 +36,4 @@ export default function MapPinPicker({ onSelect }: { onSelect: (lat: number, lng
       {marker && <Marker position={[marker.lat, marker.lng]} icon={icon} />}
     </MapContainer>
   );
-}
+} 
