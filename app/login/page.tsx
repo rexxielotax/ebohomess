@@ -25,6 +25,14 @@ export default function LoginPage() {
   const [message, setMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const houseLottieRef = useRef<any>(null);
+  const [companyName, setCompanyName] = useState('');
+  const [repName, setRepName] = useState('');
+  const [cacDoc, setCacDoc] = useState('');
+  const [authLetter, setAuthLetter] = useState('');
+  const [selfieUrl, setSelfieUrl] = useState('');
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Animation states
   const [phase, setPhase] = useState<'walking' | 'arrived' | 'form'>('walking');
@@ -46,7 +54,36 @@ export default function LoginPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (showCamera && videoRef.current) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+        .then(stream => {
+          if (videoRef.current) videoRef.current.srcObject = stream;
+        });
+    }
+  }, [showCamera]);
+
   if (!mounted) return null;
+
+  const captureSelfie = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d')?.drawImage(video, 0, 0);
+    const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', 0.8));
+    if (!blob) return;
+    const stream = video.srcObject as MediaStream;
+    stream?.getTracks().forEach(t => t.stop());
+    const data = new FormData();
+    data.append('file', blob, 'selfie.jpg');
+    data.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: data });
+    const json = await res.json();
+    if (json.secure_url) setSelfieUrl(json.secure_url);
+    setShowCamera(false);
+  };
 
   const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -275,7 +312,7 @@ export default function LoginPage() {
             <label style={labelStyle}>Phone Number</label>
             <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+234 801 234 5678" style={inputStyle} />
 
-            {role === 'property owner' && (
+            {role === 'landlord' && (
               <div style={{ marginBottom: 14 }}>
                 <label style={{ ...labelStyle, display: 'block', marginBottom: 6 }}>Proof of Ownership</label>
                 <label style={{ display: 'block', border: '2px dashed #16a34a', borderRadius: 10, padding: 12, textAlign: 'center', cursor: 'pointer', background: ownershipDoc ? '#f0fdf4' : '#fafafa' }}>
@@ -288,6 +325,66 @@ export default function LoginPage() {
                   )}
                   <input type="file" accept="image/*,application/pdf" onChange={handleDocUpload} style={{ display: 'none' }} />
                 </label>
+
+                <label style={{ ...labelStyle, display: 'block', marginTop: 12, marginBottom: 6 }}>
+                  Face Verification (Selfie)
+                </label>
+                {!selfieUrl ? (
+                  <div style={{ marginBottom: 12 }}>
+                    {!showCamera ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCamera(true)}
+                        style={{
+                          width: '100%', padding: '11px', borderRadius: 10,
+                          border: '2px dashed #16a34a', background: '#fafafa',
+                          color: '#6b7280', fontSize: 13, cursor: 'pointer',
+                        }}
+                      >
+                        📷 Open Camera for Selfie
+                      </button>
+                    ) : (
+                      <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden' }}>
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          style={{ width: '100%', borderRadius: 10, display: 'block' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={captureSelfie}
+                          style={{
+                            position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)',
+                            background: '#16a34a', color: 'white', border: 'none',
+                            borderRadius: 20, padding: '8px 20px', fontSize: 13,
+                            cursor: 'pointer', fontWeight: 700,
+                          }}
+                        >
+                          📸 Capture
+                        </button>
+                      </div>
+                    )}
+                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+                  </div>
+                ) : (
+                  <div style={{ marginBottom: 12, textAlign: 'center' }}>
+                    <img
+                      src={selfieUrl}
+                      alt="Selfie"
+                      style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '3px solid #16a34a' }}
+                    />
+                    <p style={{ fontSize: 12, color: '#16a34a', marginTop: 4 }}>✅ Selfie captured</p>
+                    <button
+                      type="button"
+                      onClick={() => { setSelfieUrl(''); setShowCamera(false); }}
+                      style={{ fontSize: 11, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer' }}
+                    >
+                      Retake
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -311,7 +408,7 @@ export default function LoginPage() {
             style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#6b7280', padding: 0 }}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
-            {showPassword ? '🙈' : '👁️'}
+            {showPassword ? '🙈' : '👁'}
           </button>
         </div>
 
