@@ -160,7 +160,7 @@ BEST PLACE TO FIND YOUR HOME IN EBONYI STATE
     animation: 'slideUpDelay 1.2s ease-out forwards',
   }}
 >
-  Connect directly with property owners, no agent commission no, no stress !!
+  Connect directly with property owners, no agent commission , no stress !!
 </p>
   </div>
 </section>

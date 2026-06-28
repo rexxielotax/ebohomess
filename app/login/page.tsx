@@ -154,7 +154,7 @@ export default function LoginPage() {
         <div
           style={{
             position: 'absolute',
-            left: phase === 'walking' ? '-10%' : '8%',
+            left: phase === 'walking' ? '-10%' : '22%',
             bottom: 0,
             width: 140,
             transition: 'left 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
@@ -169,7 +169,7 @@ export default function LoginPage() {
             autoplay
             style={{ width: 140, height: 140 }}
           />
-          <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: 700, marginTop: -10, position: 'relative', zIndex: 6 }}>
+          <p style={{ textAlign: 'center', color: '#eef1f0', fontSize: 20, fontWeight: 1000, marginTop: -10, position: 'relative', zIndex: 6 }}>
             🎓 students
           </p>
         </div>
@@ -189,8 +189,8 @@ export default function LoginPage() {
     lottieRef={houseLottieRef}
     animationData={houseAnimation}
     loop={true}
-    autoplay={false}
-    style={{ width: 180, height: 180 }}
+    autoplay={true}
+    style={{ width: 180, height: 180, display: 'block' }}
   />
   <p style={{ textAlign: 'center', color: 'white', fontSize: 13, fontWeight: 900, marginTop: -16, letterSpacing: '-0.3px' }}>
     EboHomes
@@ -200,7 +200,7 @@ export default function LoginPage() {
         <div
           style={{
             position: 'absolute',
-            right: phase === 'walking' ? '-10%' : '8%',
+            right: phase === 'walking' ? '-10%' : '22%',
             bottom: 0,
             width: 140,
             transition: 'right 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
@@ -215,8 +215,8 @@ export default function LoginPage() {
             style={{ width: 140, height: 140 }}
           />
           {/* Label is also flipped back so text reads correctly */}
-          <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: 700, marginTop: -10, transform: 'scaleX(-1)' }}>
-            🏠 workers
+          <p style={{ textAlign: 'center', color: '#eef1f0', fontSize: 20, fontWeight: 1000, marginTop: -10, transform: 'scaleX(-1)', position: 'relative', zIndex: 6 }}>
+            workers
           </p>
         </div>
       </div>
@@ -239,8 +239,8 @@ export default function LoginPage() {
         <h1 style={{ textAlign: 'center', marginBottom: 4, fontSize: 20, fontWeight: 800, color: '#15803d' }}>
           {isSignup ? '👋 Create Account' : '🏠 Login to EboHomes'}
         </h1>
-        <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: 20, fontSize: 12 }}>
-          Connecting landlords and tenants across Ebonyi State
+        <p style={{ textAlign: 'center', color: '#1d1f24', marginBottom: 20, fontSize: 12 }}>
+         your trusted market place to discover to discover,rent and manage properties in ebonyi state
         </p>
 
         {isSignup && (
@@ -264,9 +264,9 @@ export default function LoginPage() {
                     transition: 'all 0.2s',
                   }}
                 >
-                  {r === 'tenant' ? '🔍 Tenant' : '🏠 Landlord'}
+                  {r === 'tenant' ? '🔍search for a house' : '🏠list your property'}
                   <p style={{ fontSize: 10, fontWeight: 400, margin: '2px 0 0', color: '#9ca3af' }}>
-                    {r === 'tenant' ? 'Looking for a house' : 'I have a property'}
+                    {r === 'tenant' ? 'in search for a property' : 'own a property to list for rent'}
                   </p>
                 </button>
               ))}
@@ -275,7 +275,7 @@ export default function LoginPage() {
             <label style={labelStyle}>Phone Number</label>
             <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+234 801 234 5678" style={inputStyle} />
 
-            {role === 'landlord' && (
+            {role === 'property owner' && (
               <div style={{ marginBottom: 14 }}>
                 <label style={{ ...labelStyle, display: 'block', marginBottom: 6 }}>Proof of Ownership</label>
                 <label style={{ display: 'block', border: '2px dashed #16a34a', borderRadius: 10, padding: 12, textAlign: 'center', cursor: 'pointer', background: ownershipDoc ? '#f0fdf4' : '#fafafa' }}>
@@ -284,7 +284,7 @@ export default function LoginPage() {
                   ) : ownershipDoc ? (
                     <span style={{ color: '#16a34a', fontSize: 13 }}>✅ Document uploaded</span>
                   ) : (
-                    <span style={{ fontSize: 13, color: '#6b7280' }}>📄 Upload land title, C of O or deed</span>
+                    <span style={{ fontSize: 13, color: '#6b7280' }}>📄 upload ownership/authorization document</span>
                   )}
                   <input type="file" accept="image/*,application/pdf" onChange={handleDocUpload} style={{ display: 'none' }} />
                 </label>
