@@ -81,10 +81,14 @@ export default function DashboardPage() {
                 {listing.property_type && <span style={{ background: '#f3f4f6', padding: '2px 8px', borderRadius: 12, fontSize: 12 }}>{listing.property_type}</span>}
                 {listing.bedrooms && <span style={{ background: '#f3f4f6', padding: '2px 8px', borderRadius: 12, fontSize: 12 }}>{listing.bedrooms} bed</span>}
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Link href={`/listings/${listing.id}`}
+           <div style={{ display: 'flex', gap: 8 }}>
+                <Link href={'/listing/${listing.id}'}
                   style={{ flex: 1, padding: '8px 0', background: '#f3f4f6', borderRadius: 8, textAlign: 'center', textDecoration: 'none', color: '#000', fontSize: 14 }}>
                   View
+                </Link>
+                <Link href={'/dashboard/edit/${listing.id}'}
+                  style={{ flex: 1, padding: '8px 0', background: '#dbeafe', borderRadius: 8, textAlign: 'center', textDecoration: 'none', color: '#1d4ed8', fontSize: 14 }}>
+                  Edit
                 </Link>
                 <button onClick={() => handleDelete(listing.id)}
                   style={{ flex: 1, padding: '8px 0', background: '#fee2e2', border: 'none', borderRadius: 8, cursor: 'pointer', color: '#dc2626', fontSize: 14 }}>

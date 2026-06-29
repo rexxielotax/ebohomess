@@ -42,6 +42,14 @@ export default function LoginPage() {
   }
 }, ['phase']);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 480);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -191,22 +199,22 @@ export default function LoginPage() {
         <div
           style={{
             position: 'absolute',
-            left: phase === 'walking' ? '-10%' : '22%',
+            left: phase === 'walking' ? '-10%' : isMobile ? '2%' : '20%',
             bottom: 0,
-            width: 140,
+            width: isMobile ? 85 : 140,
             transition: 'left 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-            transform: 'scaleX(1)', // faces right naturally
+            transform: 'scaleX(1)',
             filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
-           zIndex: 5,
+            zIndex: 5,
           }}
         >
           <Lottie
             animationData={studentAnimation}
             loop={phase === 'walking'}
             autoplay
-            style={{ width: 140, height: 140 }}
+            style={{ width: isMobile ? 85 : 140, height: isMobile ? 85 : 140 }}
           />
-          <p style={{ textAlign: 'center', color: '#eef1f0', fontSize: 20, fontWeight: 1000, marginTop: -10, position: 'relative', zIndex: 6 }}>
+          <p style={{ textAlign: 'center', color: '#eef1f0', fontSize: isMobile ? 12 : 20, fontWeight: 1000, marginTop: -10, position: 'relative', zIndex: 6 }}>
             🎓 students
           </p>
         </div>
@@ -237,11 +245,11 @@ export default function LoginPage() {
         <div
           style={{
             position: 'absolute',
-            right: phase === 'walking' ? '-10%' : '22%',
+            right: phase === 'walking' ? '-10%' : isMobile ? '2%' : '20%',
             bottom: 0,
-            width: 140,
+            width: isMobile ? 85 : 140,
             transition: 'right 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-            transform: 'scaleX(-1)', // flip so he faces left (toward house)
+            transform: 'scaleX(-1)',
             filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
           }}
         >
@@ -249,10 +257,9 @@ export default function LoginPage() {
             animationData={workerAnimation}
             loop={phase === 'walking'}
             autoplay
-            style={{ width: 140, height: 140 }}
+            style={{ width: isMobile ? 85 : 140, height: isMobile ? 85 : 140 }}
           />
-          {/* Label is also flipped back so text reads correctly */}
-          <p style={{ textAlign: 'center', color: '#eef1f0', fontSize: 20, fontWeight: 1000, marginTop: -10, transform: 'scaleX(-1)', position: 'relative', zIndex: 6 }}>
+          <p style={{ textAlign: 'center', color: '#eef1f0', fontSize: isMobile ? 12 : 20, fontWeight: 1000, marginTop: -10, transform: 'scaleX(-1)', position: 'relative', zIndex: 6 }}>
             workers
           </p>
         </div>
