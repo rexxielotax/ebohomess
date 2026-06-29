@@ -214,7 +214,7 @@ export default function LoginPage() {
             autoplay
             style={{ width: isMobile ? 85 : 140, height: isMobile ? 85 : 140 }}
           />
-          <p style={{ textAlign: 'center', color: '#eef1f0', fontSize: isMobile ? 12 : 20, fontWeight: 1000, marginTop: -10, position: 'relative', zIndex: 6 }}>
+          <p style={{ textAlign: 'center', color: '#5fdbb2', fontSize: isMobile ? 12 : 20, fontWeight: 1000, marginTop: -10, position: 'relative', zIndex: 6, whiteSpace: 'nowrap' }}>
             🎓 students
           </p>
         </div>
@@ -398,7 +398,7 @@ export default function LoginPage() {
         )}
 
         <label style={labelStyle}>Email</label>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" style={inputStyle} />
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" style={inputStyle} />
 
         <label style={labelStyle}>Password</label>
         <div style={{ position: 'relative', marginBottom: 18 }}>
@@ -406,7 +406,7 @@ export default function LoginPage() {
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
+            placeholder="Enter your password"
             style={{ ...inputStyle, marginBottom: 0, paddingRight: 44 }}
           />
           <button
