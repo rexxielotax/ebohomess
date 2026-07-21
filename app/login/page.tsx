@@ -1,476 +1,689 @@
-'use client';
-import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+'use client'
 
-// Dynamically import lottie-react to avoid SSR issues
-import dynamic from 'next/dynamic';
-const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
-
-import workerAnimation from '@/public/lottie/walking_office_man.json';
-import studentAnimation from '@/public/lottie/man_walking.json';
-import houseAnimation from '@/public/lottie/house.json';
+import { useState, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import {
+  Mail, Lock, Eye, EyeOff, Phone, User, Home as HomeIcon,
+  ShieldCheck, Lock as LockIcon, Headphones, Camera, FileText, Check, MessageCircle
+} from 'lucide-react'
+import { Header } from '@/components/header'
+import { Footer } from '@/components/footer'
+import { Button } from '@/components/ui/button'
+import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [isSignup, setIsSignup] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('tenant');
-  const [phone, setPhone] = useState('');
-  const [ownershipDoc, setOwnershipDoc] = useState('');
-  const [docUploading, setDocUploading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const houseLottieRef = useRef<any>(null);
-  const [companyName, setCompanyName] = useState('');
-  const [repName, setRepName] = useState('');
-  const [cacDoc, setCacDoc] = useState('');
-  const [authLetter, setAuthLetter] = useState('');
-  const [selfieUrl, setSelfieUrl] = useState('');
-  const [showCamera, setShowCamera] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const router = useRouter()
 
-  // Animation states
-  const [phase, setPhase] = useState<'walking' | 'arrived' | 'form'>('walking');
+  const [isSignup, setIsSignup] = useState(false)
+  const [signupStep, setSignupStep] = useState(1) // 1: Account, 2: Role, 3: Verification
+
+  // Account fields
+  const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  // Role
+  const [role, setRole] = useState('')
+
+  // Verification (landlord only)
+  const [ownershipDoc, setOwnershipDoc] = useState('')
+  const [docUploading, setDocUploading] = useState(false)
+  const [selfieUrl, setSelfieUrl] = useState('')
+  const [showCamera, setShowCamera] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+
   useEffect(() => {
-  if (phase !== 'walking' && houseLottieRef.current) {
-    houseLottieRef.current.play();
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('mode') === 'signup') {
+    setIsSignup(true)
   }
-}, ['phase']);
-  const [mounted, setMounted] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 480);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  useEffect(() => {
-    setMounted(true);
-    // Characters walk for 2.5s, then arrive, then form pops
-    const arriveTimer = setTimeout(() => setPhase('arrived'), 2500);
-    const formTimer = setTimeout(() => setPhase('form'), 3300);
-    return () => {
-      clearTimeout(arriveTimer);
-      clearTimeout(formTimer);
-    };
-  }, []);
-
+}, [])
   useEffect(() => {
     if (showCamera && videoRef.current) {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-        .then(stream => {
-          if (videoRef.current) videoRef.current.srcObject = stream;
-        });
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }).then((stream) => {
+        if (videoRef.current) videoRef.current.srcObject = stream
+      })
     }
-  }, [showCamera]);
+  }, [showCamera])
 
-  if (!mounted) return null;
+  // Password validation
+  const passwordChecks = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+  }
+  const passwordValid = Object.values(passwordChecks).every(Boolean)
+  const passwordsMatch = password.length > 0 && password === confirmPassword
 
   const captureSelfie = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d')?.drawImage(video, 0, 0);
-    const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', 0.8));
-    if (!blob) return;
-    const stream = video.srcObject as MediaStream;
-    stream?.getTracks().forEach(t => t.stop());
-    const data = new FormData();
-    data.append('file', blob, 'selfie.jpg');
-    data.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: data });
-    const json = await res.json();
-    if (json.secure_url) setSelfieUrl(json.secure_url);
-    setShowCamera(false);
-  };
+    if (!videoRef.current || !canvasRef.current) return
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    canvas.getContext('2d')?.drawImage(video, 0, 0)
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.8))
+    if (!blob) return
+    const stream = video.srcObject as MediaStream
+    stream?.getTracks().forEach((t) => t.stop())
+    const data = new FormData()
+    data.append('file', blob, 'selfie.jpg')
+    data.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!)
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+      { method: 'POST', body: data }
+    )
+    const json = await res.json()
+    if (json.secure_url) setSelfieUrl(json.secure_url)
+    setShowCamera(false)
+  }
 
   const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setDocUploading(true);
-    const data = new FormData();
-    data.append('file', file);
-    data.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+    const file = e.target.files?.[0]
+    if (!file) return
+    setDocUploading(true)
+    const data = new FormData()
+    data.append('file', file)
+    data.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!)
     const res = await fetch(
       `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
       { method: 'POST', body: data }
-    );
-    const json = await res.json();
-    if (json.secure_url) setOwnershipDoc(json.secure_url);
-    setDocUploading(false);
-  };
+    )
+    const json = await res.json()
+    if (json.secure_url) setOwnershipDoc(json.secure_url)
+    setDocUploading(false)
+  }
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    setMessage('');
+  // Step 1 -> Step 2
+  const handleStep1Continue = (e: React.FormEvent) => {
+    e.preventDefault()
+    setMessage('')
+    if (!fullName || !phone || !email || !password || !confirmPassword) {
+      setMessage('Please fill in all fields.')
+      return
+    }
+    if (!passwordValid) {
+      setMessage('Please meet all password requirements.')
+      return
+    }
+    if (!passwordsMatch) {
+      setMessage('Passwords do not match.')
+      return
+    }
+    setSignupStep(2)
+  }
 
-    if (isSignup) {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName, role } },
-      });
-      if (error) {
-        setMessage(error.message);
-      } else if (data.user) {
-        await supabase.from('profiles').upsert({
-          id: data.user.id,
-          full_name: fullName,
-          role,
-          phone,
-          verified: false,
-          verification_status: role === 'landlord' ? 'pending' : 'approved',
-          ownership_doc_url: ownershipDoc || null,
-        });
-        setMessage(
-          role === 'tenant'
-            ? 'Account created! You can now log in.'
-            : 'Account created! Please log in to complete verification.'
-        );
-      }
+  // Step 2 -> submit (tenant) or Step 3 (landlord)
+  const handleStep2Continue = () => {
+    if (!role) {
+      setMessage('Please select a role.')
+      return
+    }
+    setMessage('')
+    if (role === 'tenant') {
+      completeSignup()
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setMessage(error.message);
-      } else {
-        const { data: userData } = await supabase.auth.getUser();
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role, verification_status')
-          .eq('id', userData?.user?.id)
-          .single();
+      setSignupStep(3)
+    }
+  }
 
-        if (profile?.role === 'tenant') {
-          router.push('/');
-        } else if (profile?.role === 'landlord') {
-          router.push(
-            profile?.verification_status === 'approved' ? '/dashboard' : '/verification-pending'
-          );
-        } else {
-          router.push('/');
-        }
+  const completeSignup = async () => {
+    setLoading(true)
+    setMessage('')
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName, role } },
+    })
+    if (error) {
+      setMessage(error.message)
+    } else if (data.user) {
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        full_name: fullName,
+        role,
+        phone,
+        verified: false,
+        verification_status: role === 'landlord' ? 'pending' : 'approved',
+        ownership_doc_url: ownershipDoc || null,
+      })
+      setMessage(
+        role === 'tenant'
+          ? 'Account created! You can now log in.'
+          : 'Account created! Please log in to complete verification.'
+      )
+      setTimeout(() => {
+        setIsSignup(false)
+        setSignupStep(1)
+      }, 1500)
+    }
+    setLoading(false)
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setMessage('')
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      setMessage(error.message)
+    } else {
+      const { data: userData } = await supabase.auth.getUser()
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, verification_status')
+        .eq('id', userData?.user?.id)
+        .single()
+
+      if (profile?.role === 'tenant') {
+        router.push('/')
+      } else if (profile?.role === 'landlord') {
+        router.push(profile?.verification_status === 'approved' ? '/dashboard' : '/verification-pending')
+      } else {
+        router.push('/')
       }
     }
-    setLoading(false);
-  };
+    setLoading(false)
+  }
+
+  const handleGoogleAuth = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/` },
+    })
+  }
+
+  const switchMode = (toSignup: boolean) => {
+    setIsSignup(toSignup)
+    setSignupStep(1)
+    setMessage('')
+  }
+
+  const steps = [
+    { n: 1, label: 'Account Details' },
+    { n: 2, label: 'Choose Role' },
+    { n: 3, label: 'Verification', sub: '(Landlords only)' },
+  ]
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #16a34a 0%, #15803d 50%, #166534 100%)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-        overflow: 'hidden',
-        position: 'relative',
-      }}
-    >
-      {/* Background circles */}
-      <div style={{ position: 'absolute', top: '8%', left: '4%', width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
-      <div style={{ position: 'absolute', bottom: '12%', right: '6%', width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
-      <div style={{ position: 'absolute', top: '40%', right: '3%', width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
 
-      {/* ── SCENE: two characters + house ── */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'center',
-          width: '100%',
-          maxWidth: 700,
-          marginBottom: phase === 'form' ? 8 : 0,
-          position: 'relative',
-          height: 200,
-        }}
-      >
-        {/* STUDENT — walks in from the LEFT */}
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-2">
+        {/* Left panel */}
         <div
+          className="hidden lg:flex flex-col justify-center relative p-12 bg-secondary"
           style={{
-            position: 'absolute',
-            left: phase === 'walking' ? '-10%' : isMobile ? '2%' : '20%',
-            bottom: 0,
-            width: isMobile ? 85 : 140,
-            transition: 'left 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-            transform: 'scaleX(1)',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
-            zIndex: 5,
+            backgroundImage: "linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.9)), url('/hero.jpg')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
           }}
         >
-          <Lottie
-            animationData={studentAnimation}
-            loop={phase === 'walking'}
-            autoplay
-            style={{ width: isMobile ? 85 : 140, height: isMobile ? 85 : 140 }}
-          />
-          <p style={{ textAlign: 'center', color: '#5fdbb2', fontSize: isMobile ? 12 : 20, fontWeight: 1000, marginTop: -10, position: 'relative', zIndex: 6, whiteSpace: 'nowrap' }}>
-            🎓 students
+          <span className="inline-flex w-fit items-center gap-2 bg-primary/10 text-primary text-sm font-medium px-3 py-1 rounded-full mb-6">
+            <ShieldCheck size={14} />
+            {isSignup ? 'Join thousands of trusted users' : 'Welcome back!'}
+          </span>
+          <h1 className="text-4xl font-extrabold text-foreground mb-3 leading-tight">
+            {isSignup ? (
+              <>Create your <span className="text-primary">EboHomes</span> account</>
+            ) : (
+              <>Login to <span className="text-primary">EboHomes</span></>
+            )}
+          </h1>
+          <p className="text-muted-foreground text-lg mb-10 max-w-md">
+            {isSignup
+              ? "Whether you're looking for a home or listing your property, we've got you covered."
+              : 'Access your account to discover, rent, and manage verified properties in Ebonyi State.'}
           </p>
-        </div>
 
-      {/* HOUSE — center */}
-<div
-  style={{
-    position: 'relative',
-    zIndex: 2,
-    opacity: phase === 'walking' ? 0.6 : 1,
-    transform: phase === 'arrived' ? 'scale(1.06)' : phase === 'form' ? 'scale(1)' : 'scale(0.95)',
-    transition: 'all 0.6s ease',
-    filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.25))',
-  }}
->
-  <Lottie
-    lottieRef={houseLottieRef}
-    animationData={houseAnimation}
-    loop={true}
-    autoplay={true}
-    style={{ width: 180, height: 180, display: 'block' }}
-  />
-  <p style={{ textAlign: 'center', color: 'white', fontSize: 13, fontWeight: 900, marginTop: -16, letterSpacing: '-0.3px' }}>
-    EboHomes
-  </p>
-</div>
-        {/* OFFICE WORKER — walks in from the RIGHT, flipped to face left */}
-        <div
-          style={{
-            position: 'absolute',
-            right: phase === 'walking' ? '-10%' : isMobile ? '2%' : '20%',
-            bottom: 0,
-            width: isMobile ? 85 : 140,
-            transition: 'right 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-            transform: 'scaleX(-1)',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
-          }}
-        >
-          <Lottie
-            animationData={workerAnimation}
-            loop={phase === 'walking'}
-            autoplay
-            style={{ width: isMobile ? 85 : 140, height: isMobile ? 85 : 140 }}
-          />
-          <p style={{ textAlign: 'center', color: '#eef1f0', fontSize: isMobile ? 12 : 20, fontWeight: 1000, marginTop: -10, transform: 'scaleX(-1)', position: 'relative', zIndex: 6 }}>
-            workers
-          </p>
-        </div>
-      </div>
-
-      {/* ── FORM — pops up once characters arrive ── */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 420,
-          opacity: phase === 'form' ? 1 : 0,
-          transform: phase === 'form' ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.96)',
-          transition: 'all 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)',
-          background: 'white',
-          borderRadius: 20,
-          padding: '28px 24px',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.25)',
-          pointerEvents: phase === 'form' ? 'auto' : 'none',
-        }}
-      >
-        <h1 style={{ textAlign: 'center', marginBottom: 4, fontSize: 20, fontWeight: 800, color: '#15803d' }}>
-          {isSignup ? '👋 Create Account' : '🏠 Login to EboHomes'}
-        </h1>
-        <p style={{ textAlign: 'center', color: '#1d1f24', marginBottom: 20, fontSize: 12 }}>
-         your trusted market place to discover to discover,rent and manage properties in ebonyi state
-        </p>
-
-        {isSignup && (
-          <>
-            <label style={labelStyle}>Full Name</label>
-            <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" style={inputStyle} />
-
-            <label style={labelStyle}>I am a</label>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-              {['tenant', 'landlord'].map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setRole(r)}
-                  style={{
-                    flex: 1, padding: '10px 8px', borderRadius: 10,
-                    border: `2px solid ${role === r ? '#16a34a' : '#e5e7eb'}`,
-                    background: role === r ? '#f0fdf4' : '#fff',
-                    color: role === r ? '#16a34a' : '#374151',
-                    fontWeight: 700, cursor: 'pointer', fontSize: 13,
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {r === 'tenant' ? '🔍search for a house' : '🏠list your property'}
-                  <p style={{ fontSize: 10, fontWeight: 400, margin: '2px 0 0', color: '#9ca3af' }}>
-                    {r === 'tenant' ? 'in search for a property' : 'own a property to list for rent'}
-                  </p>
-                </button>
-              ))}
-            </div>
-
-            <label style={labelStyle}>Phone Number</label>
-            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+234 801 234 5678" style={inputStyle} />
-
-            {role === 'landlord' && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ ...labelStyle, display: 'block', marginBottom: 6 }}>Proof of Ownership</label>
-                <label style={{ display: 'block', border: '2px dashed #16a34a', borderRadius: 10, padding: 12, textAlign: 'center', cursor: 'pointer', background: ownershipDoc ? '#f0fdf4' : '#fafafa' }}>
-                  {docUploading ? (
-                    <span style={{ color: '#16a34a', fontSize: 13 }}>Uploading...</span>
-                  ) : ownershipDoc ? (
-                    <span style={{ color: '#16a34a', fontSize: 13 }}>✅ Document uploaded</span>
-                  ) : (
-                    <span style={{ fontSize: 13, color: '#6b7280' }}>📄 upload ownership/authorization document</span>
-                  )}
-                  <input type="file" accept="image/*,application/pdf" onChange={handleDocUpload} style={{ display: 'none' }} />
-                </label>
-
-                <label style={{ ...labelStyle, display: 'block', marginTop: 12, marginBottom: 6 }}>
-                  Face Verification (Selfie)
-                </label>
-                {!selfieUrl ? (
-                  <div style={{ marginBottom: 12 }}>
-                    {!showCamera ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowCamera(true)}
-                        style={{
-                          width: '100%', padding: '11px', borderRadius: 10,
-                          border: '2px dashed #16a34a', background: '#fafafa',
-                          color: '#6b7280', fontSize: 13, cursor: 'pointer',
-                        }}
-                      >
-                        📷 Open Camera for Selfie
-                      </button>
-                    ) : (
-                      <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden' }}>
-                        <video
-                          ref={videoRef}
-                          autoPlay
-                          playsInline
-                          muted
-                          style={{ width: '100%', borderRadius: 10, display: 'block' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={captureSelfie}
-                          style={{
-                            position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)',
-                            background: '#16a34a', color: 'white', border: 'none',
-                            borderRadius: 20, padding: '8px 20px', fontSize: 13,
-                            cursor: 'pointer', fontWeight: 700,
-                          }}
-                        >
-                          📸 Capture
-                        </button>
-                      </div>
-                    )}
-                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+          <div className="space-y-5 mb-8">
+            {isSignup ? (
+              <>
+                {[
+                  { icon: ShieldCheck, title: 'Verified & Secure', desc: 'Every landlord is verified. Your data is protected.' },
+                  { icon: HomeIcon, title: 'Quality Homes', desc: 'Browse thousands of verified rentals in Ebonyi State.' },
+                  { icon: Headphones, title: '24/7 Support', desc: 'Our support team is always here to help you.' },
+                  { icon: LockIcon, title: 'Safe Platform', desc: 'We are committed to keeping renting safe and transparent.' },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <item.icon size={18} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">{item.title}</p>
+                      <p className="text-muted-foreground text-xs">{item.desc}</p>
+                    </div>
                   </div>
-                ) : (
-                  <div style={{ marginBottom: 12, textAlign: 'center' }}>
-                    <img
-                      src={selfieUrl}
-                      alt="Selfie"
-                      style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '3px solid #16a34a' }}
-                    />
-                    <p style={{ fontSize: 12, color: '#16a34a', marginTop: 4 }}>✅ Selfie captured</p>
-                    <button
-                      type="button"
-                      onClick={() => { setSelfieUrl(''); setShowCamera(false); }}
-                      style={{ fontSize: 11, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer' }}
-                    >
-                      Retake
-                    </button>
+                ))}
+              </>
+            ) : (
+              <>
+                {[
+                  { icon: ShieldCheck, title: 'Secure & Encrypted', desc: 'Your data is protected with 256-bit encryption.' },
+                  { icon: User, title: 'Verified Platform', desc: 'Every landlord is verified to keep you safe from scams.' },
+                  { icon: LockIcon, title: 'Protected Account', desc: 'We never share your information with third parties.' },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <item.icon size={18} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">{item.title}</p>
+                      <p className="text-muted-foreground text-xs">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+
+          <div className="bg-card border border-border rounded-lg p-4 max-w-sm flex items-start gap-3">
+            <MessageCircle size={20} className="text-primary shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Need help {isSignup ? 'signing up' : ''}?</p>
+              <p className="text-xs text-muted-foreground mb-1">Chat with our support team on WhatsApp.</p>
+              <a href="#" className="text-xs text-primary font-semibold hover:underline">Chat on WhatsApp →</a>
+            </div>
+          </div>
+        </div>
+
+        {/* Right panel — form */}
+        <div className="flex items-center justify-center p-6 sm:p-12">
+          <div className="w-full max-w-md">
+            {isSignup ? (
+              <>
+                <h2 className="text-2xl font-bold text-foreground text-center mb-1">Create Account</h2>
+                <p className="text-muted-foreground text-sm text-center mb-6">It only takes a few minutes</p>
+
+                {/* Step indicator */}
+                <div className="flex items-center justify-between mb-8">
+                  {steps.map((step, i) => (
+                    <div key={step.n} className="flex items-center flex-1">
+                      <div className="flex flex-col items-center">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            signupStep >= step.n
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-secondary text-muted-foreground'
+                          }`}
+                        >
+                          {step.n}
+                        </div>
+                        <p className="text-[11px] text-center text-muted-foreground mt-1 whitespace-nowrap">
+                          {step.label}
+                          {step.sub && <span className="block">{step.sub}</span>}
+                        </p>
+                      </div>
+                      {i < steps.length - 1 && (
+                        <div className={`h-0.5 flex-1 mx-1 ${signupStep > step.n ? 'bg-primary' : 'bg-border'}`} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* STEP 1 — Account Details */}
+                {signupStep === 1 && (
+                  <form onSubmit={handleStep1Continue}>
+                    <h3 className="font-semibold text-foreground mb-1">Step 1: Account Details</h3>
+                    <p className="text-xs text-muted-foreground mb-4">Tell us a bit about yourself</p>
+
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Full Name</label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                          <input
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="Enter your full name"
+                            required
+                            className="w-full pl-9 pr-3 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Phone Number</label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                          <input
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="+234 801 234 5678"
+                            required
+                            className="w-full pl-9 pr-3 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">Email Address</label>
+                    <div className="relative mb-4">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter your email address"
+                        required
+                        className="w-full pl-9 pr-3 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 mb-2">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Create a password"
+                            required
+                            className="w-full pl-9 pr-8 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Confirm Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                          <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Confirm your password"
+                            required
+                            className="w-full pl-9 pr-8 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+                            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-5 text-xs">
+                      <span className={`flex items-center gap-1 ${passwordChecks.length ? 'text-primary' : 'text-muted-foreground'}`}>
+                        <Check size={12} /> At least 8 characters
+                      </span>
+                      <span className={`flex items-center gap-1 ${passwordChecks.number ? 'text-primary' : 'text-muted-foreground'}`}>
+                        <Check size={12} /> One number
+                      </span>
+                      <span className={`flex items-center gap-1 ${passwordChecks.uppercase ? 'text-primary' : 'text-muted-foreground'}`}>
+                        <Check size={12} /> One uppercase letter
+                      </span>
+                      <span className={`flex items-center gap-1 ${passwordChecks.special ? 'text-primary' : 'text-muted-foreground'}`}>
+                        <Check size={12} /> One special character
+                      </span>
+                    </div>
+
+                    {message && <p className="text-sm text-destructive text-center mb-4">{message}</p>}
+
+                    <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5">
+                      Continue to Choose Role →
+                    </Button>
+                  </form>
+                )}
+
+                {/* STEP 2 — Choose Role */}
+                {signupStep === 2 && (
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-1">Step 2: Choose Role</h3>
+                    <p className="text-xs text-muted-foreground mb-4">How will you use EboHomes?</p>
+
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                      {[
+                        { value: 'tenant', label: "I'm a Tenant", desc: 'Find and rent a home', icon: User },
+                        { value: 'landlord', label: "I'm a Landlord", desc: 'List properties for rent', icon: HomeIcon },
+                      ].map((r) => (
+                        <button
+                          key={r.value}
+                          type="button"
+                          onClick={() => setRole(r.value)}
+                          className={`text-left p-4 rounded-lg border-2 transition-colors ${
+                            role === r.value ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary'
+                          }`}
+                        >
+                          <r.icon size={20} className={role === r.value ? 'text-primary mb-2' : 'text-muted-foreground mb-2'} />
+                          <p className="text-sm font-semibold text-foreground">{r.label}</p>
+                          <p className="text-xs text-muted-foreground">{r.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+
+                    {message && <p className="text-sm text-destructive text-center mb-4">{message}</p>}
+
+                    <div className="flex gap-3">
+                      <Button type="button" variant="outline" onClick={() => setSignupStep(1)} className="flex-1 font-semibold py-2.5">
+                        Back
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleStep2Continue}
+                        disabled={loading}
+                        className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5"
+                      >
+                        {loading ? 'Please wait...' : role === 'landlord' ? 'Continue to Verification →' : 'Create Account'}
+                      </Button>
+                    </div>
                   </div>
                 )}
-              </div>
+
+                {/* STEP 3 — Verification (landlord only) */}
+                {signupStep === 3 && (
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-1">Step 3: Verification</h3>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Landlords must verify ownership before listing properties
+                    </p>
+
+                    <div className="mb-4">
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Proof of Ownership</label>
+                      <label className={`flex items-center gap-2 justify-center border-2 border-dashed rounded-lg p-4 cursor-pointer text-sm transition-colors ${
+                        ownershipDoc ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:bg-secondary'
+                      }`}>
+                        {docUploading ? (
+                          <span>Uploading...</span>
+                        ) : ownershipDoc ? (
+                          <><Check size={16} /> Document uploaded</>
+                        ) : (
+                          <><FileText size={16} /> Upload ownership/authorization document</>
+                        )}
+                        <input type="file" accept="image/*,application/pdf" onChange={handleDocUpload} className="hidden" />
+                      </label>
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Face Verification (Selfie)</label>
+                      {!selfieUrl ? (
+                        !showCamera ? (
+                          <button
+                            type="button"
+                            onClick={() => setShowCamera(true)}
+                            className="w-full flex items-center gap-2 justify-center border-2 border-dashed border-border rounded-lg p-4 text-sm text-muted-foreground hover:bg-secondary transition-colors"
+                          >
+                            <Camera size={16} /> Open camera for selfie
+                          </button>
+                        ) : (
+                          <div className="relative rounded-lg overflow-hidden">
+                            <video ref={videoRef} autoPlay playsInline muted className="w-full rounded-lg block" />
+                            <button
+                              type="button"
+                              onClick={captureSelfie}
+                              className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-semibold px-4 py-1.5 rounded-full"
+                            >
+                              Capture
+                            </button>
+                          </div>
+                        )
+                      ) : (
+                        <div className="text-center">
+                          <img src={selfieUrl} alt="Selfie" className="w-16 h-16 rounded-full object-cover border-2 border-primary mx-auto" />
+                          <p className="text-xs text-primary mt-1">Selfie captured</p>
+                          <button
+                            type="button"
+                            onClick={() => { setSelfieUrl(''); setShowCamera(false) }}
+                            className="text-xs text-muted-foreground underline"
+                          >
+                            Retake
+                          </button>
+                        </div>
+                      )}
+                      <canvas ref={canvasRef} className="hidden" />
+                    </div>
+
+                    {message && (
+                      <p className={`text-sm text-center mb-4 ${message.includes('created') ? 'text-primary' : 'text-destructive'}`}>
+                        {message}
+                      </p>
+                    )}
+
+                    <div className="flex gap-3">
+                      <Button type="button" variant="outline" onClick={() => setSignupStep(2)} className="flex-1 font-semibold py-2.5">
+                        Back
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={completeSignup}
+                        disabled={loading}
+                        className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5"
+                      >
+                        {loading ? 'Please wait...' : 'Complete Signup'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-center text-xs text-muted-foreground mt-6 flex items-center justify-center gap-1">
+                  <ShieldCheck size={12} /> Your information is protected with 256-bit SSL encryption
+                </p>
+
+                <p className="text-center text-sm text-muted-foreground mt-4">
+                  Already have an account?{' '}
+                  <button type="button" onClick={() => switchMode(false)} className="text-primary font-semibold hover:underline">
+                    Log in
+                  </button>
+                </p>
+              </>
+            ) : (
+              <>
+                {/* LOGIN */}
+                <div className="text-center mb-6">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                    <Lock size={22} className="text-primary" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-foreground">
+                    Welcome back to <span className="text-primary">EboHomes</span>
+                  </h2>
+                  <p className="text-muted-foreground text-sm mt-1">Enter your details to continue</p>
+                </div>
+
+                <form onSubmit={handleLogin}>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Email address</label>
+                  <div className="relative mb-4">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email address"
+                      required
+                      className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Password</label>
+                  <div className="relative mb-2">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                      className="w-full pl-10 pr-10 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                      <input type="checkbox" defaultChecked className="accent-primary" />
+                      Remember me
+                    </label>
+                    <a href="#" className="text-xs text-primary font-medium hover:underline">
+                      Forgot password?
+                    </a>
+                  </div>
+
+                  {message && <p className="text-sm text-destructive text-center mb-4">{message}</p>}
+
+                  <Button type="submit" disabled={loading} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5">
+                    {loading ? 'Please wait...' : 'Sign In'}
+                  </Button>
+
+                  <div className="flex items-center gap-3 my-4">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs text-muted-foreground">or continue with</span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleGoogleAuth}
+                    className="w-full flex items-center justify-center gap-2 border border-border rounded-lg py-2.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.12-.84 2.07-1.8 2.71v2.26h2.9c1.7-1.57 2.68-3.87 2.68-6.61z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.83.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.95 10.7c-.18-.54-.28-1.11-.28-1.7s.1-1.16.28-1.7V4.97H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+                    Continue with Google
+                  </button>
+
+                  <div className="flex items-center justify-center gap-3 mt-4 bg-primary/5 rounded-lg py-2 text-[11px] text-primary font-medium">
+                    <span className="flex items-center gap-1"><ShieldCheck size={12} /> Secure login</span>
+                    <span>•</span>
+                    <span>Encrypted</span>
+                    <span>•</span>
+                    <span>Verified platform</span>
+                  </div>
+                </form>
+
+                <p className="text-center text-sm text-muted-foreground mt-5">
+                  Don't have an account?{' '}
+                  <button type="button" onClick={() => switchMode(true)} className="text-primary font-semibold hover:underline">
+                    Create one
+                  </button>
+                </p>
+
+                <div className="bg-card border border-border rounded-lg p-4 mt-6 flex items-start gap-3">
+                  <MessageCircle size={20} className="text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Need help?</p>
+                    <p className="text-xs text-muted-foreground mb-1">Chat with our support team on WhatsApp.</p>
+                    <a href="#" className="text-xs text-primary font-semibold hover:underline">Chat on WhatsApp →</a>
+                  </div>
+                </div>
+              </>
             )}
-          </>
-        )}
-
-        <label style={labelStyle}>Email</label>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" style={inputStyle} />
-
-        <label style={labelStyle}>Password</label>
-        <div style={{ position: 'relative', marginBottom: 18 }}>
-          <input
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            style={{ ...inputStyle, marginBottom: 0, paddingRight: 44 }}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#6b7280', padding: 0 }}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
-          >
-            {showPassword ? '🙈' : '👁'}
-          </button>
+          </div>
         </div>
+      </main>
 
-        {message && (
-          <p style={{ color: message.includes('created') ? '#16a34a' : '#dc2626', marginBottom: 12, fontSize: 13, textAlign: 'center' }}>
-            {message}
-          </p>
-        )}
-
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          style={{
-            width: '100%', padding: 13,
-            background: loading ? '#86efac' : 'linear-gradient(135deg, #16a34a, #15803d)',
-            color: '#fff', border: 'none', borderRadius: 10,
-            fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
-            boxShadow: '0 4px 15px rgba(22,163,74,0.4)',
-            transition: 'all 0.2s',
-          }}
-        >
-          {loading ? 'Please wait...' : isSignup ? 'Create Account' : 'Login'}
-        </button>
-
-        <p style={{ textAlign: 'center', marginTop: 14, fontSize: 13, color: '#6b7280' }}>
-          {isSignup ? 'Already have an account?' : "Don't have an account?"}
-          <button
-            style={{ background: 'none', border: 'none', color: '#16a34a', cursor: 'pointer', fontWeight: 700, marginLeft: 4, fontSize: 13 }}
-            onClick={() => { setIsSignup(!isSignup); setMessage(''); }}
-          >
-            {isSignup ? 'Login' : 'Sign Up'}
-          </button>
-        </p>
-      </div>
+      <Footer />
     </div>
-  );
+  )
 }
-
-const labelStyle: React.CSSProperties = {
-  fontWeight: 700,
-  fontSize: 13,
-  color: '#374151',
-  display: 'block',
-  marginBottom: 4,
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  marginBottom: 12,
-  padding: '11px 14px',
-  borderRadius: 10,
-  border: '1.5px solid #e5e7eb',
-  fontSize: 14,
-  outline: 'none',
-  boxSizing: 'border-box',
-  transition: 'border-color 0.2s',
-  fontFamily: 'inherit',
-};

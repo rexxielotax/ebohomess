@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Sun, Moon, LogOut, LayoutDashboard } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Sun, Moon, LogOut, LayoutDashboard, Heart, Bell, Menu, X } from 'lucide-react'
 import { Button } from './ui/button'
 import { supabase } from '@/lib/supabase'
 
 export function Header() {
   const router = useRouter()
+  const pathname = usePathname()
   const [isDark, setIsDark] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [role, setRole] = useState<string | null>(null)
   const [loggedIn, setLoggedIn] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -27,10 +29,10 @@ export function Header() {
       setLoggedIn(true)
 
       const { data: profile } = await supabase
-  .from('profiles')
-  .select('role')
-  .eq('id', userId)
-  .maybeSingle()
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle()
       setRole(profile?.role ?? null)
     }
     fetchRole()
@@ -58,21 +60,29 @@ export function Header() {
     router.push('/')
   }
 
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId)
-    if (element) element.scrollIntoView({ behavior: 'smooth' })
+  const goToHowItWorks = () => {
+    if (pathname === '/') {
+      const element = document.getElementById('how-it-works')
+      if (element) element.scrollIntoView({ behavior: 'smooth' })
+    } else {
+      router.push('/#how-it-works')
+    }
+    setMobileMenuOpen(false)
   }
+
+  const navLinks = [
+    { label: 'Home', href: '/' },
+    { label: 'Properties', href: '/search' },
+    { label: 'About Us', href: '/about' },
+    { label: 'Contact', href: '/contact' },
+  ]
 
   if (!mounted) {
     return (
       <header className="sticky top-0 z-40 bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <img
-              src="/logo.png"
-              alt="EboHomes"
-              className="h-20 w-auto"
-            />
+            <img src="/logo.png" alt="EboHomes" className="h-14 w-auto" />
             <div className="flex items-center gap-4">
               <div className="h-10 w-10 bg-muted rounded" />
               <div className="h-10 w-24 bg-muted rounded" />
@@ -85,49 +95,53 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-card border-b border-border shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex items-center justify-between">
-
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div className="flex items-center justify-between gap-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 shrink-0">
             <img
               src="/logo.png"
               alt="EboHomes"
-              className="h-20 w-auto transition-all duration-300 hover:drop-shadow-[0_0_12px_#16a34a]"
-              style={{ animation: 'fadeIn 0.8s ease-in, glowPulse 3s ease-in-out infinite' }}
+              className="h-12 md:h-14 w-auto transition-all duration-300 hover:drop-shadow-[0_0_12px_#16a34a]"
+              style={{ animation: 'fadeIn 0.8s ease-in' }}
             />
           </Link>
 
-          {/* Middle Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          {/* Desktop Nav */}
+          <nav className="hidden lg:flex items-center gap-6">
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className={`text-sm font-medium transition-colors ${
+                  pathname === link.href
+                    ? 'text-primary'
+                    : 'text-foreground hover:text-primary'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
             <button
-              onClick={() => scrollToSection('how-it-works')}
-              className="text-foreground hover:text-primary transition-colors text-sm font-medium"
+              onClick={goToHowItWorks}
+              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
             >
               How It Works
             </button>
-            <button
-              onClick={() => scrollToSection('about')}
-              className="text-foreground hover:text-primary transition-colors text-sm font-medium"
-            >
-              About
-            </button>
 
-            {/* Show Search link for tenants */}
             {loggedIn && role === 'tenant' && (
               <Link
                 href="/search"
-                className="text-foreground hover:text-primary transition-colors text-sm font-medium"
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors"
               >
                 Search Properties
               </Link>
             )}
 
-            {/* Show Dashboard link for landlords */}
             {loggedIn && role === 'landlord' && (
               <Link
                 href="/dashboard"
-                className="text-foreground hover:text-primary transition-colors text-sm font-medium flex items-center gap-1"
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1"
               >
                 <LayoutDashboard size={16} />
                 Dashboard
@@ -136,7 +150,29 @@ export function Header() {
           </nav>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
+            {/* Saved / Heart */}
+            {loggedIn && (
+              <Link
+                href="/saved"
+                className="p-2 rounded-lg hover:bg-muted transition-colors text-foreground hidden sm:inline-flex"
+                aria-label="Saved properties"
+              >
+                <Heart size={20} />
+              </Link>
+            )}
+
+            {/* Notifications / Bell */}
+            {loggedIn && (
+              <Link
+                href="/notifications"
+                className="p-2 rounded-lg hover:bg-muted transition-colors text-foreground hidden sm:inline-flex"
+                aria-label="Notifications"
+              >
+                <Bell size={20} />
+              </Link>
+            )}
+
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
@@ -146,7 +182,7 @@ export function Header() {
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 
-            {/* Not logged in — show Login + List buttons */}
+            {/* Not logged in */}
             {!loggedIn && (
               <>
                 <Link href="/login">
@@ -154,33 +190,26 @@ export function Header() {
                     Login
                   </Button>
                 </Link>
-                <Button
-                  onClick={handleListClick}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold hidden sm:inline-flex"
-                >
-                  List Your Property
-                </Button>
-                <Button
-                  onClick={handleListClick}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold sm:hidden h-9 px-3 text-sm"
-                >
-                  List
-                </Button>
+                <Link href="/login?mode=signup">
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold hidden sm:inline-flex">
+                    Sign Up
+                  </Button>
+                </Link>
               </>
             )}
 
-            {/* Logged in as TENANT — show logout only, no list button */}
+            {/* Logged in — TENANT */}
             {loggedIn && role === 'tenant' && (
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="hidden sm:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <LogOut size={16} />
-                <span className="hidden sm:inline">Logout</span>
+                <span>Logout</span>
               </button>
             )}
 
-            {/* Logged in as LANDLORD — show List Your Property + logout */}
+            {/* Logged in — LANDLORD */}
             {loggedIn && role === 'landlord' && (
               <>
                 <Button
@@ -191,49 +220,98 @@ export function Header() {
                 </Button>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="hidden sm:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <LogOut size={16} />
-                  <span className="hidden sm:inline">Logout</span>
+                  <span>Logout</span>
                 </button>
               </>
             )}
+
+            {/* Mobile menu toggle */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors text-foreground"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
           </div>
         </div>
 
         {/* Mobile Nav */}
-        <nav className="md:hidden flex items-center gap-4 mt-3 pt-3 border-t border-border">
-          <button
-            onClick={() => scrollToSection('how-it-works')}
-            className="text-sm font-medium text-foreground hover:text-primary"
-          >
-            How It Works
-          </button>
-          <button
-            onClick={() => scrollToSection('about')}
-            className="text-sm font-medium text-foreground hover:text-primary"
-          >
-            About
-          </button>
-          {loggedIn && role === 'tenant' && (
-            <Link href="/search" className="text-sm font-medium text-foreground hover:text-primary">
-              Search
-            </Link>
-          )}
-          {loggedIn && role === 'landlord' && (
-            <Link href="/dashboard" className="text-sm font-medium text-foreground hover:text-primary">
-              Dashboard
-            </Link>
-          )}
-          {loggedIn && (
+        {mobileMenuOpen && (
+          <nav className="lg:hidden flex flex-col gap-1 mt-3 pt-3 border-t border-border">
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`text-sm font-medium py-2 ${
+                  pathname === link.href ? 'text-primary' : 'text-foreground hover:text-primary'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
             <button
-              onClick={handleLogout}
-              className="text-sm font-medium text-red-500 hover:text-red-700"
+              onClick={goToHowItWorks}
+              className="text-sm font-medium text-foreground hover:text-primary text-left py-2"
             >
-              Logout
+              How It Works
             </button>
-          )}
-        </nav>
+
+            {loggedIn && (
+              <>
+                <Link href="/saved" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-foreground hover:text-primary py-2 flex items-center gap-2">
+                  <Heart size={16} /> Saved Properties
+                </Link>
+                <Link href="/notifications" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-foreground hover:text-primary py-2 flex items-center gap-2">
+                  <Bell size={16} /> Notifications
+                </Link>
+              </>
+            )}
+
+            {loggedIn && role === 'tenant' && (
+              <Link href="/search" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-foreground hover:text-primary py-2">
+                Search Properties
+              </Link>
+            )}
+            {loggedIn && role === 'landlord' && (
+              <>
+                <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-foreground hover:text-primary py-2">
+                  Dashboard
+                </Link>
+                <Link href="/list-property" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-primary py-2">
+                  + List Property
+                </Link>
+              </>
+            )}
+
+            {!loggedIn && (
+              <div className="flex gap-3 pt-2">
+                <Link href="/login" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full font-semibold">Login</Button>
+                </Link>
+                <Link href="/login?mode=signup" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
+                  <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">Sign Up</Button>
+                </Link>
+              </div>
+            )}
+
+            {loggedIn && (
+              <button
+                onClick={() => {
+                  handleLogout()
+                  setMobileMenuOpen(false)
+                }}
+                className="flex items-center gap-2 text-sm font-medium text-red-500 hover:text-red-700 py-2 mt-1"
+              >
+                <LogOut size={16} /> Logout
+              </button>
+            )}
+          </nav>
+        )}
       </div>
     </header>
   )

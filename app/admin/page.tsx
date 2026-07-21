@@ -1,243 +1,247 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+'use client'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Check, X, FileEdit, Home as HomeIcon } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
 
-export default function AdminPage() {
-  const router = useRouter();
-  const [landlords, setLandlords] = useState<any[]>([]);
-  const [listings, setListings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'landlords' | 'listings'>('landlords');
+const CHECKLIST = [
+  'Property photos are clear and real',
+  'Property details are accurate',
+  'Price is reasonable for the location',
+  'No duplicate or misleading info',
+  'Follows EboHomes listing guidelines',
+]
+
+export default function PropertyReviewPage() {
+  const router = useRouter()
+  const [authorized, setAuthorized] = useState(false)
+  const [listings, setListings] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<'pending' | 'approved' | 'rejected'>('pending')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   useEffect(() => {
-    const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
-        router.push('/');
-        return;
-      }
-      setAuthorized(true);
-      fetchData();
-    };
-    init();
-  }, []);
-
-  const fetchData = async () => {
-    const { data: landlordData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('role', 'landlord')
-      .order('created_at', { ascending: false });
-
-    const { data: listingData } = await supabase
-      .from('listings')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    setLandlords(landlordData || []);
-    setListings(listingData || []);
-    setLoading(false);
-  };
-
- const handleApproveLandlord = async (id: string) => {
-  await supabase
-    .from('profiles')
-    .update({ verification_status: 'approved', verified: true })
-    .eq('id', id);
-  setLandlords((prev) =>
-    prev.map((l) => l.id === id ? { ...l, verification_status: 'approved', verified: true } : l)
-  );
-};
-
-const handleGrantBadge = async (id: string) => {
-  await supabase
-    .from('profiles')
-    .update({ badge: 'verified' })
-    .eq('id', id);
-  setLandlords((prev) =>
-    prev.map((l) => l.id === id ? { ...l, badge: 'verified' } : l)
-  );
-};
-
-  const handleRejectLandlord = async (id: string) => {
-    await supabase
-      .from('profiles')
-      .update({ verification_status: 'rejected', verified: false })
-      .eq('id', id);
-    setLandlords((prev) =>
-      prev.map((l) => l.id === id ? { ...l, verification_status: 'rejected' } : l)
-    );
-  };
-const handleApproveListing = async (id: string) => {
-  const { error } = await supabase
-    .from('listings')
-    .update({ status: 'approved' })
-    .eq('id', id);
-  
-  console.log('Approve listing error:', error);
-  
-  if (!error) {
-    setListings((prev) =>
-      prev.map((l) => l.id === id ? { ...l, status: 'approved' } : l)
-    );
+   const init = async () => {
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  console.log('USER:', user, 'USER ERROR:', userError)
+  if (!user) {
+    router.push('/login')
+    return
   }
-};
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  console.log('PROFILE:', profile, 'PROFILE ERROR:', profileError)
 
-  const handleRejectListing = async (id: string) => {
-    await supabase
+  if (profile?.role !== 'admin') {
+    console.log('BLOCKED — role was:', profile?.role)
+    router.push('/')
+    return
+  }
+  setAuthorized(true)
+  fetchListings()
+}
+    init()
+  }, [])
+
+  const fetchListings = async () => {
+    const { data } = await supabase
       .from('listings')
-      .update({ status: 'rejected' })
-      .eq('id', id);
-    setListings((prev) =>
-      prev.map((l) => l.id === id ? { ...l, status: 'rejected' } : l)
-    );
-  };
+      .select('*')
+      .order('created_at', { ascending: false })
+    setListings(data || [])
+    setLoading(false)
+  }
 
-  if (!authorized) return null;
+  const filtered = listings.filter((l) => (l.status || 'pending') === tab)
+  const selected = listings.find((l) => l.id === selectedId) || filtered[0]
 
-  const statusBadge = (status: string) => ({
-    display: 'inline-block',
-    padding: '2px 10px',
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 'bold' as const,
-    background: status === 'approved' ? '#f0fdf4' : status === 'rejected' ? '#fef2f2' : '#fefce8',
-    color: status === 'approved' ? '#16a34a' : status === 'rejected' ? '#dc2626' : '#ca8a04',
-  });
+  useEffect(() => {
+    if (filtered.length > 0 && !filtered.find((l) => l.id === selectedId)) {
+      setSelectedId(filtered[0].id)
+    }
+    if (filtered.length === 0) setSelectedId(null)
+  }, [tab, listings])
+
+  const handleApprove = async (id: string) => {
+    const { error } = await supabase.from('listings').update({ status: 'approved' }).eq('id', id)
+    if (!error) setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: 'approved' } : l)))
+  }
+
+  const handleReject = async (id: string) => {
+    const { error } = await supabase.from('listings').update({ status: 'rejected' }).eq('id', id)
+    if (!error) setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: 'rejected' } : l)))
+  }
+
+  const counts = {
+    pending: listings.filter((l) => (l.status || 'pending') === 'pending').length,
+    approved: listings.filter((l) => l.status === 'approved').length,
+    rejected: listings.filter((l) => l.status === 'rejected').length,
+  }
+
+  if (!authorized) return null
 
   return (
-    <div style={{ maxWidth: 900, margin: '40px auto', padding: 24 }}>
-      <h1 style={{ marginBottom: 8 }}>🛡 EboHomes Admin</h1>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <h1 className="text-2xl font-bold text-foreground mb-1">Property Review / Approval</h1>
+      <p className="text-sm text-muted-foreground mb-6">Review property details and approve or reject listings.</p>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-        <button
-          onClick={() => setActiveTab('landlords')}
-          style={{
-            padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            background: activeTab === 'landlords' ? '#16a34a' : '#f3f4f6',
-            color: activeTab === 'landlords' ? '#fff' : '#000',
-            fontWeight: 'bold',
-          }}
-        >
-          Landlords ({landlords.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('listings')}
-          style={{
-            padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            background: activeTab === 'listings' ? '#16a34a' : '#f3f4f6',
-            color: activeTab === 'listings' ? '#fff' : '#000',
-            fontWeight: 'bold',
-          }}
-        >
-          Listings ({listings.length})
-        </button>
+      <div className="flex gap-2 mb-6">
+        {(['pending', 'approved', 'rejected'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-colors ${
+              tab === t ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground hover:bg-secondary'
+            }`}
+          >
+            {t} ({counts[t]})
+          </button>
+        ))}
       </div>
 
-      {loading ? <p>Loading...</p> : (
-        <>
-          {/* Landlords Tab */}
-          {activeTab === 'landlords' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {landlords.length === 0 ? <p style={{ color: '#6b7280' }}>No landlords found.</p> : landlords.map((l) => (
-                <div key={l.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 20 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <h3 style={{ margin: '0 0 4px' }}>{l.full_name || 'No name'}</h3>
-                      <p style={{ margin: '0 0 4px', color: '#6b7280', fontSize: 14 }}>{l.email || l.phone || 'No contact'}</p>
-                      <span style={statusBadge(l.verification_status || 'pending')}>
-                        {(l.verification_status || 'pending').toUpperCase()}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-  {l.ownership_doc_url && (
-    <a href={l.ownership_doc_url} target="_blank" rel="noreferrer"
-      style={{ padding: '8px 16px', background: '#f3f4f6', borderRadius: 8, textDecoration: 'none', color: '#000', fontSize: 14 }}>
-      📄 View Doc
-    </a>
-  )}
-  {l.verification_status !== 'approved' && (
-    <button onClick={() => handleApproveLandlord(l.id)}
-      style={{ padding: '8px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14 }}>
-      ✅ Approve
-    </button>
-  )}
-  {l.verification_status !== 'rejected' && (
-    <button onClick={() => handleRejectLandlord(l.id)}
-      style={{ padding: '8px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14 }}>
-      ❌ Reject
-    </button>
-  )}
-  <button
-    onClick={() => handleGrantBadge(l.id)}
-    style={{
-      padding: '8px 16px',
-      background: l.badge === 'verified' ? '#1d4ed8' : '#eff6ff',
-      color: l.badge === 'verified' ? '#fff' : '#1d4ed8',
-      border: '1px solid #1d4ed8',
-      borderRadius: 8,
-      cursor: 'pointer',
-      fontSize: 14,
-      fontWeight: 'bold',
-    }}>
-    {l.badge === 'verified' ? '🔵 Verified' : '🔵 Grant Badge'}
-  </button>
-</div>
-                  </div>
+      {loading ? (
+        <p className="text-muted-foreground">Loading...</p>
+      ) : filtered.length === 0 ? (
+        <div className="bg-card border border-border rounded-lg p-12 text-center text-muted-foreground">
+          No {tab} listings.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* List */}
+          <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
+            {filtered.map((l) => (
+              <button
+                key={l.id}
+                onClick={() => setSelectedId(l.id)}
+                className={`w-full text-left bg-card border rounded-lg p-3 flex gap-3 transition-colors ${
+                  selected?.id === l.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary'
+                }`}
+              >
+                <img src={l.photos?.[0] || ''} className="w-16 h-16 object-cover rounded-lg bg-secondary shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{l.title || 'Untitled listing'}</p>
+                  <p className="text-xs text-muted-foreground truncate">{l.location_text}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Submitted {l.created_at ? new Date(l.created_at).toLocaleDateString() : ''}
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
+              </button>
+            ))}
+          </div>
 
-          {/* Listings Tab */}
-          {activeTab === 'listings' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {listings.length === 0 ? <p style={{ color: '#6b7280' }}>No listings found.</p> : listings.map((l) => (
-                <div key={l.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 20 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <h3 style={{ margin: '0 0 4px' }}>{l.title || 'Untitled listing'}</h3>
-                      <p style={{ margin: '0 0 4px', color: '#6b7280', fontSize: 14 }}>{l.location_text} · ₦{l.price_monthly?.toLocaleString()}/mo</p>
-                      <span style={statusBadge(l.status || 'pending')}>
-                        {(l.status || 'pending').toUpperCase()}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {l.photos?.[0] && (
-                        <a href={l.photos[0]} target="_blank" rel="noreferrer"
-                          style={{ padding: '8px 16px', background: '#f3f4f6', borderRadius: 8, textDecoration: 'none', color: '#000', fontSize: 14 }}>
-                          🖼 View Photo
-                        </a>
-                      )}
-                      {l.ownership_doc_url && (
-                        <a href={l.ownership_doc_url} target="_blank" rel="noreferrer"
-                          style={{ padding: '8px 16px', background: '#f3f4f6', borderRadius: 8, textDecoration: 'none', color: '#000', fontSize: 14 }}>
-                          📄 View Doc
-                        </a>
-                      )}
-                      {l.status !== 'approved' && (
-                        <button onClick={() => handleApproveListing(l.id)}
-                          style={{ padding: '8px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14 }}>
-                          ✅ Approve
-                        </button>
-                      )}
-                      {l.status !== 'rejected' && (
-                        <button onClick={() => handleRejectListing(l.id)}
-                          style={{ padding: '8px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14 }}>
-                          ❌ Reject
-                        </button>
-                      )}
-                    </div>
+          {/* Detail */}
+          {selected && (
+            <div className="lg:col-span-2 space-y-4">
+              <div className="bg-card border border-border rounded-lg overflow-hidden">
+                {selected.photos?.[0] ? (
+                  <img src={selected.photos[0]} className="w-full h-72 object-cover" />
+                ) : (
+                  <div className="w-full h-72 bg-secondary flex items-center justify-center text-muted-foreground">
+                    No Photo
+                  </div>
+                )}
+                {selected.photos?.length > 1 && (
+                  <div className="flex gap-2 p-3 overflow-x-auto">
+                    {selected.photos.slice(1, 6).map((p: string, i: number) => (
+                      <img key={i} src={p} className="w-16 h-16 object-cover rounded-md shrink-0" />
+                    ))}
+                    {selected.photos.length > 6 && (
+                      <div className="w-16 h-16 rounded-md bg-secondary flex items-center justify-center text-xs text-muted-foreground shrink-0">
+                        +{selected.photos.length - 6} More
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-card border border-border rounded-lg p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground">{selected.title || 'Untitled listing'}</h2>
+                    <p className="text-sm text-muted-foreground">{selected.location_text}</p>
+                  </div>
+                  <p className="text-lg font-bold text-primary">₦{selected.price_monthly?.toLocaleString()}/mo</p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 text-xs">
+                  <div className="bg-secondary rounded-lg p-2 text-center">
+                    <p className="font-semibold text-foreground">{selected.bedrooms ?? '—'}</p>
+                    <p className="text-muted-foreground">Bedrooms</p>
+                  </div>
+                  <div className="bg-secondary rounded-lg p-2 text-center">
+                    <p className="font-semibold text-foreground">{selected.bathrooms ?? '—'}</p>
+                    <p className="text-muted-foreground">Bathrooms</p>
+                  </div>
+                  <div className="bg-secondary rounded-lg p-2 text-center">
+                    <p className="font-semibold text-foreground">{selected.property_type ?? '—'}</p>
+                    <p className="text-muted-foreground">Type</p>
+                  </div>
+                  <div className="bg-secondary rounded-lg p-2 text-center">
+                    <p className="font-semibold text-foreground">{selected.furnished ? 'Yes' : 'No'}</p>
+                    <p className="text-muted-foreground">Furnished</p>
                   </div>
                 </div>
-              ))}
+
+                {selected.description && (
+                  <p className="text-sm text-muted-foreground mb-4">{selected.description}</p>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 text-xs mb-4 border-t border-border pt-3">
+                  <p><span className="text-muted-foreground">Property ID:</span> <span className="font-medium text-foreground">{selected.id?.slice(0, 8)}</span></p>
+                  <p><span className="text-muted-foreground">Status:</span> <span className="font-medium text-foreground capitalize">{selected.status || 'pending'}</span></p>
+                  <p><span className="text-muted-foreground">Listed On:</span> <span className="font-medium text-foreground">{selected.created_at ? new Date(selected.created_at).toLocaleDateString() : '—'}</span></p>
+                  <p><span className="text-muted-foreground">Available:</span> <span className="font-medium text-foreground">{selected.availability_date || 'Immediately'}</span></p>
+                </div>
+
+                {selected.ownership_doc_url && (
+                  <a
+                    href={selected.ownership_doc_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline mb-4"
+                  >
+                    <FileEdit size={14} /> View ownership document
+                  </a>
+                )}
+              </div>
+
+              {/* Review checklist + actions */}
+              <div className="bg-card border border-border rounded-lg p-5">
+                <h3 className="font-semibold text-foreground mb-3">Check before approving</h3>
+                <ul className="space-y-2 mb-5">
+                  {CHECKLIST.map((item) => (
+                    <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Check size={14} className="text-primary" /> {item}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    onClick={() => handleApprove(selected.id)}
+                    disabled={selected.status === 'approved'}
+                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Check size={16} /> Approve Property
+                  </Button>
+                  <Button
+                    onClick={() => handleReject(selected.id)}
+                    disabled={selected.status === 'rejected'}
+                    variant="outline"
+                    className="flex-1 border-destructive text-destructive hover:bg-destructive/10 font-semibold flex items-center justify-center gap-2"
+                  >
+                    <X size={16} /> Reject Property
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
-  );
+  )
 }

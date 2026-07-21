@@ -1,96 +1,251 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useParams } from 'next/navigation';
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { Heart, Share2, MapPin, Phone, MessageCircle, ShieldCheck, Flag, Calendar } from 'lucide-react'
+import { Header } from '@/components/header'
+import { Footer } from '@/components/footer'
+import { Button } from '@/components/ui/button'
+import { supabase } from '@/lib/supabase'
+import dynamic from 'next/dynamic'
+
+const MapPlaceholder = dynamic(
+  () => import('@/components/map-placeholder').then((mod) => ({ default: mod.MapPlaceholder })),
+  { ssr: false }
+)
 
 export default function ListingDetailPage() {
-  const { id } = useParams();
-  const [listing, setListing] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [currentPhoto, setCurrentPhoto] = useState(0);
+  const { id } = useParams()
+  const router = useRouter()
+  const [listing, setListing] = useState<any>(null)
+  const [landlord, setLandlord] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [currentPhoto, setCurrentPhoto] = useState(0)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     const fetchListing = async () => {
-      const { data } = await supabase
-        .from('listings')
-        .select('*')
-        .eq('id', id)
-        .single();
-      setListing(data);
-      setLoading(false);
-    };
-    if (id) fetchListing();
-  }, [id]);
+      const { data } = await supabase.from('listings').select('*').eq('id', id).single()
+      setListing(data)
 
-  if (loading) return <div style={{ padding: 40 }}>Loading...</div>;
-  if (!listing) return <div style={{ padding: 40 }}>Listing not found.</div>;
+      if (data?.landlord_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, phone, verified')
+          .eq('id', data.landlord_id)
+          .maybeSingle()
+        setLandlord(profile)
+      }
+      setLoading(false)
+    }
+    if (id) fetchListing()
+  }, [id])
 
-  return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>
-      <a href="/search" style={{ color: '#16a34a', textDecoration: 'none', fontSize: 14 }}>← Back to Search</a>
-
-      {listing.photos?.length > 0 ? (
-        <div style={{ marginTop: 16 }}>
-          <img src={listing.photos[currentPhoto]} alt="photo" style={{ width: '100%', height: 380, objectFit: 'cover', borderRadius: 12 }} />
-          {listing.photos.length > 1 && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 8, overflowX: 'auto' }}>
-              {listing.photos.map((url: string, i: number) => (
-                <img key={i} src={url} alt="thumb" onClick={() => setCurrentPhoto(i)}
-                  style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, cursor: 'pointer', border: i === currentPhoto ? '2px solid #16a34a' : 'none' }} />
-              ))}
-            </div>
-          )}
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <div className="max-w-6xl mx-auto px-4 py-10 w-full animate-pulse">
+          <div className="h-96 bg-secondary rounded-lg mb-4" />
+          <div className="h-6 bg-secondary rounded w-1/3 mb-2" />
+          <div className="h-4 bg-secondary rounded w-1/4" />
         </div>
-      ) : (
-        <div style={{ width: '100%', height: 380, background: '#f3f4f6', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', marginTop: 16 }}>No Photos</div>
-      )}
+        <Footer />
+      </div>
+    )
+  }
 
-      <div style={{ marginTop: 24 }}>
-        <h1 style={{ margin: '0 0 8px' }}>{listing.title}</h1>
-        <p style={{ color: '#6b7280', margin: '0 0 8px' }}>📍 {listing.location_text}</p>
-        <p style={{ fontSize: 24, fontWeight: 'bold', color: '#16a34a', margin: '0 0 16px' }}>₦{listing.price_monthly?.toLocaleString()}/month</p>
-
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-          {listing.property_type && <span style={{ background: '#f3f4f6', padding: '4px 12px', borderRadius: 20, fontSize: 14 }}>{listing.property_type}</span>}
-          {listing.bedrooms && <span style={{ background: '#f3f4f6', padding: '4px 12px', borderRadius: 20, fontSize: 14 }}>{listing.bedrooms} Bedrooms</span>}
-          {listing.availability_date && <span style={{ background: '#dcfce7', padding: '4px 12px', borderRadius: 20, fontSize: 14 }}>Available: {listing.availability_date}</span>}
-        </div>
-
-        {listing.description && (
-          <div style={{ marginBottom: 16 }}>
-            <h3>Description</h3>
-            <p style={{ color: '#374151', lineHeight: 1.6 }}>{listing.description}</p>
-          </div>
-        )}
-
-        {listing.amenities?.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
-            <h3>Amenities</h3>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {listing.amenities.map((a: string) => (
-                <span key={a} style={{ background: '#dcfce7', color: '#16a34a', padding: '4px 12px', borderRadius: 20, fontSize: 14 }}>✓ {a}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div style={{ background: '#f9fafb', borderRadius: 12, padding: 20, marginBottom: 24 }}>
-          <h3 style={{ margin: '0 0 12px' }}>Contact Landlord</h3>
-          <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 16px' }}>Interested in this property? Contact the landlord directly.</p>
-          <a href={`tel:${listing.contact_info}`}
-            style={{ display: 'block', width: '100%', padding: 14, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>
-            📞 Call Landlord
-          </a>
-          <button
-            onClick={() => {
-              const text = `Hi, I found your listing on EboHomes: ${listing.title} in ${listing.location_text}. Is it still available?`;
-              window.open(`https://wa.me/${listing.contact_info?.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`);
-            }}
-            style={{ display: 'block', width: '100%', padding: 14, background: '#25d366', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, cursor: 'pointer', marginTop: 8 }}>
-            💬 WhatsApp Landlord
+  if (!listing) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+          <p className="text-lg font-semibold text-foreground mb-2">Listing not found</p>
+          <button onClick={() => router.push('/search')} className="text-primary text-sm font-medium hover:underline">
+            ← Back to search
           </button>
         </div>
+        <Footer />
       </div>
+    )
+  }
+
+  const photos: string[] = listing.photos || []
+  const whatsappMessage = `Hi, I found your listing on EboHomes: ${listing.title} in ${listing.location_text}. Is it still available?`
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
+
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+        <button onClick={() => router.back()} className="text-sm text-primary font-medium hover:underline mb-4">
+          ← Back to search
+        </button>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left: photos + details */}
+          <div className="lg:col-span-2">
+            {/* Photo gallery */}
+            <div className="relative rounded-lg overflow-hidden border border-border mb-2">
+              {listing.verified && (
+                <span className="absolute top-3 left-3 z-10 bg-primary text-primary-foreground text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <ShieldCheck size={12} /> Verified
+                </span>
+              )}
+              <button
+                onClick={() => setSaved(!saved)}
+                className="absolute top-3 right-14 z-10 w-9 h-9 rounded-full bg-white/90 flex items-center justify-center"
+              >
+                <Heart size={18} className={saved ? 'fill-destructive text-destructive' : 'text-foreground'} />
+              </button>
+              <button className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/90 flex items-center justify-center">
+                <Share2 size={16} className="text-foreground" />
+              </button>
+
+              {photos.length > 0 ? (
+                <img src={photos[currentPhoto]} alt={listing.title} className="w-full h-96 object-cover" />
+              ) : (
+                <div className="w-full h-96 bg-secondary flex items-center justify-center text-muted-foreground">
+                  No Photos
+                </div>
+              )}
+              {photos.length > 1 && (
+                <span className="absolute bottom-3 left-3 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                  {currentPhoto + 1} / {photos.length}
+                </span>
+              )}
+            </div>
+
+            {photos.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto mb-6 pb-1">
+                {photos.map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    onClick={() => setCurrentPhoto(i)}
+                    className={`w-20 h-16 object-cover rounded-md cursor-pointer border-2 shrink-0 ${
+                      i === currentPhoto ? 'border-primary' : 'border-transparent'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Title & price */}
+            <div className="flex items-start justify-between gap-4 mb-1">
+              <h1 className="text-2xl font-bold text-foreground">{listing.title}</h1>
+            </div>
+            <p className="flex items-center gap-1 text-muted-foreground text-sm mb-4">
+              <MapPin size={14} /> {listing.location_text}
+            </p>
+
+            <div className="flex flex-wrap gap-2 mb-6">
+              {listing.property_type && (
+                <span className="bg-secondary text-foreground text-xs font-medium px-3 py-1.5 rounded-full">
+                  {listing.property_type}
+                </span>
+              )}
+              {listing.bedrooms != null && (
+                <span className="bg-secondary text-foreground text-xs font-medium px-3 py-1.5 rounded-full">
+                  {listing.bedrooms} Bedrooms
+                </span>
+              )}
+              {listing.bathrooms != null && (
+                <span className="bg-secondary text-foreground text-xs font-medium px-3 py-1.5 rounded-full">
+                  {listing.bathrooms} Bathrooms
+                </span>
+              )}
+              {listing.availability_date && (
+                <span className="bg-primary/10 text-primary text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1">
+                  <Calendar size={12} /> Available: {listing.availability_date}
+                </span>
+              )}
+            </div>
+
+            {listing.description && (
+              <div className="mb-6">
+                <h3 className="font-semibold text-foreground mb-2">Description</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{listing.description}</p>
+              </div>
+            )}
+
+            {listing.amenities?.length > 0 && (
+              <div className="mb-6">
+                <h3 className="font-semibold text-foreground mb-3">Amenities</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {listing.amenities.map((a: string) => (
+                    <span key={a} className="text-sm text-foreground flex items-center gap-2">
+                      <ShieldCheck size={14} className="text-primary" /> {a}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {listing.lat && listing.lng && (
+              <div className="mb-6">
+                <h3 className="font-semibold text-foreground mb-3">Location</h3>
+                <div className="rounded-lg overflow-hidden border border-border">
+                  <MapPlaceholder height="h-64" listings={[{ id: listing.id, lat: listing.lat, lng: listing.lng, title: listing.title }]} />
+                </div>
+              </div>
+            )}
+
+            <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors">
+              <Flag size={12} /> Report this listing
+            </button>
+          </div>
+
+          {/* Right: sticky contact card */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24 space-y-4">
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-2xl font-bold text-primary">₦{listing.price_monthly?.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mb-4">per month</p>
+
+                <div className="border-t border-border pt-4">
+                  <p className="text-sm font-semibold text-foreground mb-3">Contact Landlord</p>
+                  {landlord && (
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-sm font-semibold text-foreground">
+                        {landlord.full_name?.[0] ?? 'L'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{landlord.full_name}</p>
+                        {landlord.verified && (
+                          <p className="text-xs text-primary flex items-center gap-1">
+                            <ShieldCheck size={11} /> Verified Landlord
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={() =>
+                      window.open(
+                        `https://wa.me/${listing.contact_info?.replace(/\D/g, '')}?text=${encodeURIComponent(whatsappMessage)}`,
+                        '_blank'
+                      )
+                    }
+                    className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold mb-2 flex items-center justify-center gap-2"
+                  >
+                    <MessageCircle size={16} /> Chat on WhatsApp
+                  </Button>
+
+                  <a href={`tel:${listing.contact_info}`}>
+                    <Button variant="outline" className="w-full font-semibold flex items-center justify-center gap-2">
+                      <Phone size={16} /> Call Landlord
+                    </Button>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <Footer />
     </div>
-  );
+  )
 }
