@@ -2,19 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { Sun, Moon, LogOut, LayoutDashboard, Heart, Bell, Menu, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Sun, Moon, LogOut, LayoutDashboard, Menu, X } from 'lucide-react'
 import { Button } from './ui/button'
 import { supabase } from '@/lib/supabase'
 
 export function Header() {
   const router = useRouter()
-  const pathname = usePathname()
   const [isDark, setIsDark] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [role, setRole] = useState<string | null>(null)
   const [loggedIn, setLoggedIn] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -28,11 +27,15 @@ export function Header() {
 
       setLoggedIn(true)
 
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', userId)
         .maybeSingle()
+
+      if (error) {
+        console.error('Failed to fetch profile role:', error)
+      }
       setRole(profile?.role ?? null)
     }
     fetchRole()
@@ -60,33 +63,19 @@ export function Header() {
     router.push('/')
   }
 
-  const goToHowItWorks = () => {
-    if (pathname === '/') {
-      const element = document.getElementById('how-it-works')
-      if (element) element.scrollIntoView({ behavior: 'smooth' })
-    } else {
-      router.push('/#how-it-works')
-    }
-    setMobileMenuOpen(false)
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId)
+    if (element) element.scrollIntoView({ behavior: 'smooth' })
   }
-
-  const navLinks = [
-    { label: 'Home', href: '/' },
-    { label: 'Properties', href: '/search' },
-    { label: 'About Us', href: '/about' },
-    { label: 'Contact', href: '/contact' },
-  ]
 
   if (!mounted) {
     return (
-      <header className="sticky top-0 z-40 bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <img src="/logo.png" alt="EboHomes" className="h-14 w-auto" />
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 bg-muted rounded" />
-              <div className="h-10 w-24 bg-muted rounded" />
-            </div>
+      <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <div className="h-10 w-36 bg-muted rounded-lg animate-pulse" />
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-20 bg-muted rounded-xl" />
+            <div className="h-9 w-24 bg-muted rounded-xl" />
           </div>
         </div>
       </header>
@@ -94,222 +83,143 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-40 bg-card border-b border-border shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-        <div className="flex items-center justify-between gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <img
-              src="/logo.png"
-              alt="EboHomes"
-              className="h-12 md:h-14 w-auto transition-all duration-300 hover:drop-shadow-[0_0_12px_#16a34a]"
-              style={{ animation: 'fadeIn 0.8s ease-in' }}
-            />
-          </Link>
+    <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-20">
 
-          {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                className={`text-sm font-medium transition-colors ${
-                  pathname === link.href
-                    ? 'text-primary'
-                    : 'text-foreground hover:text-primary'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
+          <div className="flex items-center gap-2">
             <button
-              onClick={goToHowItWorks}
-              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden p-2 rounded-xl hover:bg-muted text-foreground -ml-2"
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+
+            <Link href="/" className="flex items-center gap-2 shrink-0">
+              <img src="/logo.png" alt="EboHomes" className="h-9 sm:h-11 w-auto" />
+            </Link>
+          </div>
+
+          <nav className="hidden md:flex items-center gap-8">
+            <button
+              onClick={() => scrollToSection('how-it-works')}
+              className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
             >
               How It Works
             </button>
+            <button
+              onClick={() => scrollToSection('about')}
+              className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+            >
+              About
+            </button>
 
             {loggedIn && role === 'tenant' && (
-              <Link
-                href="/search"
-                className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-              >
+              <Link href="/search" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
                 Search Properties
               </Link>
             )}
 
             {loggedIn && role === 'landlord' && (
-              <Link
-                href="/dashboard"
-                className="text-sm font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1"
-              >
+              <Link href="/dashboard" className="flex items-center gap-1.5 text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
                 <LayoutDashboard size={16} />
                 Dashboard
               </Link>
             )}
           </nav>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-2 md:gap-3">
-            {/* Saved / Heart */}
-            {loggedIn && (
-              <Link
-                href="/saved"
-                className="p-2 rounded-lg hover:bg-muted transition-colors text-foreground hidden sm:inline-flex"
-                aria-label="Saved properties"
-              >
-                <Heart size={20} />
-              </Link>
-            )}
-
-            {/* Notifications / Bell */}
-            {loggedIn && (
-              <Link
-                href="/notifications"
-                className="p-2 rounded-lg hover:bg-muted transition-colors text-foreground hidden sm:inline-flex"
-                aria-label="Notifications"
-              >
-                <Bell size={20} />
-              </Link>
-            )}
-
-            {/* Dark Mode Toggle */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={toggleDarkMode}
-              className="p-2 rounded-lg hover:bg-muted transition-colors text-foreground"
+              className="p-2.5 rounded-xl hover:bg-muted transition-colors text-foreground/70 hidden sm:inline-flex"
               aria-label="Toggle dark mode"
             >
-              {isDark ? <Sun size={20} /> : <Moon size={20} />}
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            {/* Not logged in */}
             {!loggedIn && (
               <>
                 <Link href="/login">
-                  <Button variant="outline" className="hidden sm:inline-flex font-semibold">
-                    Login
+                  <Button variant="outline" size="sm">
+                    Log in
                   </Button>
                 </Link>
                 <Link href="/login?mode=signup">
-                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold hidden sm:inline-flex">
+                  <Button size="sm">
                     Sign Up
                   </Button>
                 </Link>
               </>
             )}
 
-            {/* Logged in — TENANT */}
-            {loggedIn && role === 'tenant' && (
-              <button
-                onClick={handleLogout}
-                className="hidden sm:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <LogOut size={16} />
-                <span>Logout</span>
-              </button>
-            )}
-
-            {/* Logged in — LANDLORD */}
-            {loggedIn && role === 'landlord' && (
+            {loggedIn && (
               <>
-                <Button
-                  onClick={handleListClick}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold hidden sm:inline-flex"
-                >
-                  + List Property
-                </Button>
+                {role === 'landlord' && (
+                  <Button onClick={handleListClick} size="sm" className="hidden sm:inline-flex">
+                    + List Property
+                  </Button>
+                )}
                 <button
                   onClick={handleLogout}
-                  className="hidden sm:flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-2 sm:px-3 py-2"
                 >
                   <LogOut size={16} />
-                  <span>Logout</span>
+                  <span className="hidden sm:inline">Logout</span>
                 </button>
               </>
             )}
-
-            {/* Mobile menu toggle */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors text-foreground"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
           </div>
         </div>
 
-        {/* Mobile Nav */}
-        {mobileMenuOpen && (
-          <nav className="lg:hidden flex flex-col gap-1 mt-3 pt-3 border-t border-border">
-            {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`text-sm font-medium py-2 ${
-                  pathname === link.href ? 'text-primary' : 'text-foreground hover:text-primary'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
+        {mobileOpen && (
+          <nav className="md:hidden flex flex-col gap-1 pb-4 pt-2 border-t border-border">
             <button
-              onClick={goToHowItWorks}
-              className="text-sm font-medium text-foreground hover:text-primary text-left py-2"
+              onClick={() => { scrollToSection('how-it-works'); setMobileOpen(false) }}
+              className="text-left text-sm font-medium text-foreground py-2.5 px-2 rounded-lg hover:bg-muted"
             >
               How It Works
             </button>
-
-            {loggedIn && (
-              <>
-                <Link href="/saved" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-foreground hover:text-primary py-2 flex items-center gap-2">
-                  <Heart size={16} /> Saved Properties
-                </Link>
-                <Link href="/notifications" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-foreground hover:text-primary py-2 flex items-center gap-2">
-                  <Bell size={16} /> Notifications
-                </Link>
-              </>
-            )}
-
+            <button
+              onClick={() => { scrollToSection('about'); setMobileOpen(false) }}
+              className="text-left text-sm font-medium text-foreground py-2.5 px-2 rounded-lg hover:bg-muted"
+            >
+              About
+            </button>
             {loggedIn && role === 'tenant' && (
-              <Link href="/search" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-foreground hover:text-primary py-2">
+              <Link href="/search" className="text-sm font-medium text-foreground py-2.5 px-2 rounded-lg hover:bg-muted">
                 Search Properties
               </Link>
             )}
             {loggedIn && role === 'landlord' && (
               <>
-                <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-foreground hover:text-primary py-2">
+                <Link href="/dashboard" className="text-sm font-medium text-foreground py-2.5 px-2 rounded-lg hover:bg-muted">
                   Dashboard
                 </Link>
-                <Link href="/list-property" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-primary py-2">
+                <button
+                  onClick={handleListClick}
+                  className="text-left text-sm font-medium text-primary py-2.5 px-2 rounded-lg hover:bg-muted"
+                >
                   + List Property
-                </Link>
+                </button>
               </>
             )}
-
-            {!loggedIn && (
-              <div className="flex gap-3 pt-2">
-                <Link href="/login" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="outline" className="w-full font-semibold">Login</Button>
-                </Link>
-                <Link href="/login?mode=signup" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
-                  <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">Sign Up</Button>
-                </Link>
-              </div>
-            )}
-
             {loggedIn && (
               <button
-                onClick={() => {
-                  handleLogout()
-                  setMobileMenuOpen(false)
-                }}
-                className="flex items-center gap-2 text-sm font-medium text-red-500 hover:text-red-700 py-2 mt-1"
+                onClick={() => { handleLogout(); setMobileOpen(false) }}
+                className="text-left text-sm font-medium text-foreground py-2.5 px-2 rounded-lg hover:bg-muted flex items-center gap-2"
               >
-                <LogOut size={16} /> Logout
+                <LogOut size={16} />
+                Logout
               </button>
             )}
+            <button
+              onClick={toggleDarkMode}
+              className="text-left text-sm font-medium text-foreground py-2.5 px-2 rounded-lg hover:bg-muted flex items-center gap-2"
+            >
+              {isDark ? <Sun size={16} /> : <Moon size={16} />}
+              {isDark ? 'Light mode' : 'Dark mode'}
+            </button>
           </nav>
         )}
       </div>
