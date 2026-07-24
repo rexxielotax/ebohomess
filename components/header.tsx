@@ -86,7 +86,6 @@ export function Header() {
     <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -97,7 +96,7 @@ export function Header() {
             </button>
 
             <Link href="/" className="flex items-center gap-2 shrink-0">
-              <img src="/logo.png" alt="EboHomes" className="h-9 sm:h-11 w-auto" />
+              <img src="/logo-horizontal-compact.png" alt="EboHomes" className="h-16 sm:h-20 w-auto" />
             </Link>
           </div>
 
@@ -174,18 +173,25 @@ export function Header() {
 
         {mobileOpen && (
           <nav className="md:hidden flex flex-col gap-1 pb-4 pt-2 border-t border-border">
+            <Link href="/" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
+              Home
+            </Link>
+            <Link href="/search" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
+              Properties
+            </Link>
             <button
-              onClick={() => { scrollToSection('how-it-works'); setMobileOpen(false) }}
-              className="text-left text-sm font-medium text-foreground py-2.5 px-2 rounded-lg hover:bg-muted"
+              onClick={() => scrollToSection('how-it-works')}
+              className="text-left text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
             >
               How It Works
             </button>
-            <button
-              onClick={() => { scrollToSection('about'); setMobileOpen(false) }}
-              className="text-left text-sm font-medium text-foreground py-2.5 px-2 rounded-lg hover:bg-muted"
-            >
-              About
-            </button>
+            <Link href="/about" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
+              About Us
+            </Link>
+            <Link href="/contact" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
+              Contact
+            </Link>
+
             {loggedIn && role === 'tenant' && (
               <Link href="/search" className="text-sm font-medium text-foreground py-2.5 px-2 rounded-lg hover:bg-muted">
                 Search Properties

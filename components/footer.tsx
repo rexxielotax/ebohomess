@@ -33,7 +33,7 @@ export function Footer() {
 
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-3">
-              <img src="/logo.png" alt="EboHomes" className="h-9 w-auto" />
+              <img src="/logo-white.png" alt="EboHomes" className="h-14 w-auto" />
             </div>
             <p className="text-sm text-white/70 leading-relaxed mb-4">
               Connecting landlords and tenants across Ebonyi State with trust

@@ -121,7 +121,13 @@ export default function PropertyReviewPage() {
                   selected?.id === l.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary'
                 }`}
               >
-                <img src={l.photos?.[0] || ''} className="w-16 h-16 object-cover rounded-lg bg-secondary shrink-0" />
+                {l.photos?.[0] ? (
+  <img src={l.photos[0]} className="w-16 h-16 object-cover rounded-lg bg-secondary shrink-0" />
+) : (
+  <div className="w-16 h-16 rounded-lg bg-secondary shrink-0 flex items-center justify-center">
+    <HomeIcon size={20} className="text-muted-foreground" />
+  </div>
+)}
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{l.title || 'Untitled listing'}</p>
                   <p className="text-xs text-muted-foreground truncate">{l.location_text}</p>
