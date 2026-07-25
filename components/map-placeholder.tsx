@@ -9,6 +9,7 @@ interface MapPlaceholderProps {
   onPinClick?: (id: string) => void
   highlightedPin?: string
   onLocationSelect?: (lat: number, lng: number) => void
+  listings?: { id: string; lat: number; lng: number; title: string }[]
 }
 
 const PINS = [

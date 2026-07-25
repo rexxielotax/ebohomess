@@ -27,12 +27,14 @@ import {
   BadgeCheck,
   SearchCheck,
   Headphones,
+  CheckCircle2,
 } from 'lucide-react'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { ListingCard } from '@/components/listing-card'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
+
 
 const CATEGORIES = [
   { value: 'Flat / Apartment', label: 'Apartments', desc: 'Modern apartments for comfortable living', icon: Building2 },
@@ -131,17 +133,16 @@ export default function HomePage() {
     fetchStats()
   }, [])
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    const params = new URLSearchParams()
-    if (location) params.set('location', location)
-    if (propertyType) params.set('type', propertyType)
-    if (minPrice) params.set('minPrice', minPrice)
-    if (maxPrice) params.set('maxPrice', maxPrice)
-    params.set('mode', listingMode)
-    router.push(`/search?${params.toString()}`)
-  }
-
+const handleSearch = (e: React.FormEvent) => {
+  e.preventDefault()
+  const params = new URLSearchParams()
+  if (location) params.set('location', location)
+  if (propertyType) params.set('type', propertyType)
+  if (minPrice) params.set('minPrice', minPrice)
+  if (maxPrice) params.set('maxPrice', maxPrice)
+  params.set('mode', listingMode)
+  router.push('/search?' + params.toString())
+}
   const scrollToSearch = () => {
     searchCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
@@ -160,6 +161,7 @@ export default function HomePage() {
     { icon: Headphones, label: '24/7 Support' },
   ]
 
+  
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -381,7 +383,7 @@ export default function HomePage() {
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.value}
-                onClick={() => router.push(`/search?type=${encodeURIComponent(cat.value)}`)}
+              onClick={() => router.push('/search?type=' + encodeURIComponent(cat.value))}
                 className="text-left bg-card border border-border rounded-xl p-5 hover:border-primary hover:shadow-md transition-all"
               >
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
@@ -396,121 +398,81 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+{/* How It Works */}
+<section id="how-it-works" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+  <div className="max-w-xl mb-12">
+    <span className="text-primary text-xs font-semibold tracking-wide uppercase">Getting started</span>
+    <h2 className="text-2xl md:text-4xl font-bold text-foreground mt-2">
+      From search to move in, <span className="text-primary">four steps</span>
+    </h2>
+  </div>
 
-        {/* How It Works */}
-        <section id="how-it-works" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-          <div className="text-center mb-10">
-            <span className="inline-block bg-primary/10 text-primary text-xs font-semibold px-3 py-1 rounded-full mb-3">
-              SIMPLE & EASY
-            </span>
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-              How It <span className="text-primary">Works</span>
-            </h2>
-            <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Finding your perfect home in Ebonyi State is simple. Follow these easy steps to get started.
-            </p>
-          </div>
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-14">
+    {steps.map((step) => (
+      <div key={step.n}>
+        <p className="text-4xl md:text-5xl font-extrabold text-primary/15 mb-1 leading-none">0{step.n}</p>
+        <step.icon size={20} className="text-primary mb-3" />
+        <p className="font-semibold text-foreground mb-1">{step.title}</p>
+        <p className="text-muted-foreground text-xs md:text-sm">{step.desc}</p>
+      </div>
+    ))}
+  </div>
 
-          <div className="hidden lg:flex items-start mb-12">
-            {steps.map((step, i) => (
-              <div key={step.n} className="flex items-start flex-1">
-                <div className="flex flex-col items-center text-center w-full">
-                  <div className="relative inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-3">
-                    <step.icon size={26} className="text-primary" />
-                    <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
-                      {step.n}
-                    </span>
-                  </div>
-                  <p className="font-semibold text-foreground text-sm mb-1">{step.title}</p>
-                  <p className="text-muted-foreground text-xs px-3">{step.desc}</p>
-                </div>
-                {i < steps.length - 1 && (
-                  <div className="flex-1 border-t-2 border-dashed border-primary/30 mt-8 mx-1" />
-                )}
-              </div>
-            ))}
-          </div>
+  <div className="bg-secondary/40 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
+    <ShieldCheck size={32} className="text-primary shrink-0" />
+    <div className="flex-1 text-center md:text-left">
+      <h3 className="text-lg font-bold text-foreground mb-1">Safe. Simple. Stress-free.</h3>
+      <p className="text-muted-foreground text-sm">
+        We verify landlords, secure your information, and make sure your home search experience is smooth from start to finish.
+      </p>
+    </div>
+    <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 shrink-0">
+      {TRUST_MINI.map((t) => (
+        <span key={t.label} className="text-xs font-medium text-foreground">{t.label}</span>
+      ))}
+    </div>
+  </div>
+</section>
 
-          <div className="grid grid-cols-2 lg:hidden gap-6 mb-10">
-            {steps.map((step) => (
-              <div key={step.n} className="text-center">
-                <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
-                  <step.icon size={20} className="text-primary" />
-                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
-                    {step.n}
-                  </span>
-                </div>
-                <p className="font-semibold text-foreground text-sm mb-1">{step.title}</p>
-                <p className="text-muted-foreground text-xs">{step.desc}</p>
-              </div>
-            ))}
-          </div>
+      {/* Why Choose EboHomes */}
+<section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+  <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+    <div className="relative">
+      <img
+        src="/hero.jpg"
+        alt="Verified home in Ebonyi State"
+        className="rounded-2xl object-cover w-full h-[380px] md:h-[440px]"
+      />
+      <div className="absolute -bottom-6 -right-4 sm:-right-6 bg-card border border-border rounded-xl px-5 py-4 shadow-lg">
+        <p className="text-2xl font-extrabold text-foreground">{stats.landlords}+</p>
+        <p className="text-xs text-muted-foreground max-w-[140px]">Verified landlords ready to rent to you</p>
+      </div>
+    </div>
 
-          <div className="bg-secondary/50 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <ShieldCheck size={36} className="text-primary" />
-            </div>
-            <div className="flex-1 text-center md:text-left">
-              <h3 className="text-lg font-bold text-foreground mb-1">Safe. Simple. Stress-Free.</h3>
-              <p className="text-muted-foreground text-sm">
-                We verify landlords, secure your information, and make sure your home search experience is smooth from start to finish.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 shrink-0">
-              {TRUST_MINI.map((t) => (
-                <div key={t.label} className="flex items-center gap-2">
-                  <t.icon size={16} className="text-primary" />
-                  <span className="text-xs font-medium text-foreground">{t.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Why Choose EboHomes */}
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-          <div className="text-center mb-10">
-            <span className="inline-block bg-primary/10 text-primary text-xs font-semibold px-3 py-1 rounded-full mb-3">
-              OUR PROMISE
-            </span>
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-              Why Choose <span className="text-primary">EboHomes</span>?
-            </h2>
-            <p className="text-muted-foreground text-sm max-w-xl mx-auto">
-              We're committed to making your home search simple, safe, and stress-free. Here's what makes us different.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
-            {WHY_CHOOSE.map((item) => (
-              <div key={item.title} className="bg-card border-t-4 border-t-primary border border-border rounded-xl p-5 text-center">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                  <item.icon size={22} className="text-primary" />
-                </div>
-                <p className="font-semibold text-foreground text-sm mb-1">{item.title}</p>
-                <p className="text-muted-foreground text-xs">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-secondary/50 rounded-2xl p-6 grid grid-cols-2 gap-6 text-center">
+    <div>
+      <span className="text-primary text-xs font-semibold tracking-wide uppercase">Our promise</span>
+      <h2 className="text-2xl md:text-4xl font-bold text-foreground mt-2 mb-4">
+        Why trust <span className="text-primary">EboHomes?</span>
+      </h2>
+      <p className="text-muted-foreground text-sm mb-8 max-w-md">
+        We built EboHomes because finding a home in Ebonyi State shouldn't mean risking a scam. Here's what that actually means for you.
+      </p>
+      <ul className="space-y-5">
+        {WHY_CHOOSE.map((item) => (
+          <li key={item.title} className="flex gap-3">
+            <CheckCircle2 size={20} className="text-primary shrink-0 mt-0.5" />
             <div>
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                <HomeIcon size={18} className="text-primary" />
-              </div>
-              <p className="text-xl md:text-2xl font-extrabold text-foreground">{stats.properties}+</p>
-              <p className="text-xs text-muted-foreground">Properties Listed</p>
+              <p className="font-semibold text-foreground text-sm">{item.title}</p>
+              <p className="text-muted-foreground text-sm">{item.desc}</p>
             </div>
-            <div>
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                <Users size={18} className="text-primary" />
-              </div>
-              <p className="text-xl md:text-2xl font-extrabold text-foreground">{stats.landlords}+</p>
-              <p className="text-xs text-muted-foreground">Verified Landlords</p>
-            </div>
-          </div>
-        </section>
-
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</section>
+          
+            
         {/* Partner Universities */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="bg-secondary/40 rounded-2xl p-6 md:p-8 text-center">
@@ -557,6 +519,30 @@ export default function HomePage() {
           </div>
         </section>
       </main>
+
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
+  <div className="bg-primary rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-5 text-primary-foreground">
+    <div className="flex items-center gap-4">
+      <div className="w-14 h-14 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0 text-2xl">
+        👑
+      </div>
+      <div>
+        <h3 className="text-lg md:text-xl font-bold mb-1">
+          List Your Property as <span className="text-amber-400">Featured</span>
+        </h3>
+        <p className="text-primary-foreground/80 text-sm max-w-md">
+          Increase visibility, get more inquiries, and close deals faster by upgrading to a Featured Listing.
+        </p>
+      </div>
+    </div>
+    <Button
+      onClick={() => router.push('/dashboard/listings')}
+      className="bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold px-6 py-3 rounded-full whitespace-nowrap"
+    >
+      Upgrade to Featured →
+    </Button>
+  </div>
+</section>
 
       <Footer />
     </div>
