@@ -66,6 +66,13 @@ export default function PropertyReviewPage() {
     if (filtered.length === 0) setSelectedId(null)
   }, [tab, listings])
 
+  const handleToggleFeatured = async (id: string, current: boolean) => {
+  const { error } = await supabase.from('listings').update({ featured: !current }).eq('id', id)
+  if (!error) {
+    setListings((prev) => prev.map((l) => (l.id === id ? { ...l, featured: !current } : l)))
+  }
+}
+
   const handleApprove = async (id: string) => {
     const { error } = await supabase.from('listings').update({ status: 'approved' }).eq('id', id)
     if (!error) setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: 'approved' } : l)))
@@ -138,6 +145,33 @@ export default function PropertyReviewPage() {
               </button>
             ))}
           </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+  <Button
+    onClick={() => handleApprove(selected.id)}
+    disabled={selected.status === 'approved'}
+    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center gap-2"
+  >
+    <Check size={16} /> Approve Property
+  </Button>
+  <Button
+    onClick={() => handleReject(selected.id)}
+    disabled={selected.status === 'rejected'}
+    variant="outline"
+    className="flex-1 border-destructive text-destructive hover:bg-destructive/10 font-semibold flex items-center justify-center gap-2"
+  >
+    <X size={16} /> Reject Property
+  </Button>
+  <Button
+    onClick={() => handleToggleFeatured(selected.id, selected.featured)}
+    variant="outline"
+    className={`flex-1 font-semibold flex items-center justify-center gap-2 ${
+      selected.featured ? 'border-amber-500 text-amber-600 bg-amber-50' : 'border-border text-muted-foreground'
+    }`}
+  >
+    ⭐ {selected.featured ? 'Unfeature' : 'Feature'} Property
+  </Button>
+</div>
 
           {/* Detail */}
           {selected && (

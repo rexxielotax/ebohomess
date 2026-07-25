@@ -40,8 +40,8 @@ export default function SearchPage() {
   const [locationText, setLocationText] = useState('')
   const [search, setSearch] = useState('')
   const [propertyType, setPropertyType] = useState('')
-  const [minPrice, setMinPrice] = useState(50000)
-  const [maxPrice, setMaxPrice] = useState(1000000)
+  const [minPrice, setMinPrice] = useState(0)
+const [maxPrice, setMaxPrice] = useState(10000000000000)
   const [bedrooms, setBedrooms] = useState<string>('')
   const [bathrooms, setBathrooms] = useState<string>('')
   const [amenities, setAmenities] = useState<string[]>([])
@@ -106,15 +106,15 @@ export default function SearchPage() {
 
   const activeFilterCount =
     (propertyType ? 1 : 0) +
-    (minPrice > 50000 || maxPrice < 1000000 ? 1 : 0) +
+    (minPrice > 0 || maxPrice < 10000000000000 ? 1 : 0) +
     (bedrooms ? 1 : 0) +
     (bathrooms ? 1 : 0) +
     amenities.length
 
   const clearFilters = () => {
     setPropertyType('')
-    setMinPrice(50000)
-    setMaxPrice(1000000)
+    setMinPrice(0)
+    setMaxPrice(10000000000000)
     setBedrooms('')
     setBathrooms('')
     setAmenities([])
@@ -170,8 +170,8 @@ export default function SearchPage() {
         <label className="text-sm font-medium text-foreground mb-2 block">Price Range (₦ / year)</label>
         <input
           type="range"
-          min={50000}
-          max={1000000}
+          min={0}
+          max={10000000000000}
           step={10000}
           value={maxPrice}
           onChange={(e) => setMaxPrice(Number(e.target.value))}

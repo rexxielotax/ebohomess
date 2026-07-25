@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MapPin, Bed, Home } from 'lucide-react'
 import { VerifiedBadge, FeaturedBadge } from './badges'
+import { ShareButton } from './share-button'
 
 interface ListingCardProps {
   id: string
@@ -47,16 +48,17 @@ export function ListingCard({
 
         {/* Content */}
         <div className="p-4">
-          {/* Price */}
-          <div className="mb-2">
-            <p className="text-lg font-bold text-primary">
-              ₦{price_monthly.toLocaleString()}/month
-            </p>
-            <p className="text-xs text-muted-foreground">
-              ₦{price_yearly.toLocaleString()}/year
-            </p>
-          </div>
-
+      <div className="mb-2 flex items-start justify-between">
+  <div>
+    <p className="text-lg font-bold text-primary">
+      ₦{price_monthly.toLocaleString()}/month
+    </p>
+    <p className="text-xs text-muted-foreground">
+      ₦{price_yearly.toLocaleString()}/year
+    </p>
+  </div>
+  <ShareButton listingId={id} />
+</div>
           {/* Location */}
           <div className="flex items-start gap-2 mb-3">
             <MapPin size={16} className="text-muted-foreground flex-shrink-0 mt-0.5" />

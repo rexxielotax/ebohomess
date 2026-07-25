@@ -52,6 +52,19 @@ export default function ListPropertyPage() {
     phoneNumber: '',
     availabilityDate: '',
   })
+  const PROPERTY_TYPES = [
+  'Flat / Apartment',
+  'Bungalow',
+  'Duplex',
+  'Self Contain',
+  'Penthouse',
+  'Hostel',
+  'Office',
+  'Shop / Mall',
+  'Warehouse',
+  'Land / Plot',
+  'Event Center',
+]
 
   const [showMapModal, setShowMapModal] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -60,24 +73,33 @@ export default function ListPropertyPage() {
   const [docName, setDocName] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setDocUploading(true)
-    const data = new FormData()
-    data.append('file', file)
-    data.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!)
-    const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
-      { method: 'POST', body: data }
-    )
-    const json = await res.json()
-    if (json.secure_url) {
-      setOwnershipDoc(json.secure_url)
-      setDocName(file.name)
-    }
+ const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  setDocUploading(true)
+
+  const { data: userData } = await supabase.auth.getUser()
+  const userId = userData?.user?.id ?? 'anonymous'
+  const filePath = `${userId}/${Date.now()}-${file.name}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('ownership-docs')
+    .upload(filePath, file)
+
+  if (uploadError) {
+    alert('Failed to upload document: ' + uploadError.message)
     setDocUploading(false)
+    return
   }
+
+  const { data } = supabase.storage
+    .from('ownership-docs')
+    .getPublicUrl(filePath)
+
+  setOwnershipDoc(data.publicUrl)
+  setDocName(file.name)
+  setDocUploading(false)
+}
 
   const removeDoc = () => {
     setOwnershipDoc('')
@@ -148,7 +170,7 @@ export default function ListPropertyPage() {
       description: formData.description,
       listing_type: formData.listingType,
       price_monthly: Number(formData.monthlyRent),
-      price_yearly: formData.annualRent ? Number(formData.annualRent) : null,
+
       location_text: formData.location,
       lat: formData.lat,
       lng: formData.lng,
