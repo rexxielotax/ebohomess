@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase'
 export default function DashboardOverview() {
   const router = useRouter()
   const [profile, setProfile] = useState<any>(null)
+  const [allListings, setAllListings] = useState<any[]>([])
   const [stats, setStats] = useState({ total: 0, published: 0, pending: 0, featured: 0, totalViews: 0, newEnquiries: 0 })
   const [attention, setAttention] = useState<any[]>([])
   const [activity, setActivity] = useState<any[]>([])
@@ -37,6 +38,8 @@ export default function DashboardOverview() {
         .select('*')
         .eq('landlord_id', user.id)
         .order('created_at', { ascending: false })
+
+      setAllListings(listings ?? [])
 
       const total = listings?.length ?? 0
       const published = listings?.filter((l) => l.status === 'approved').length ?? 0
@@ -70,6 +73,20 @@ export default function DashboardOverview() {
     )
   }
 
+  const featurableListing =
+    allListings.find((l) => l.status === 'approved' && !l.featured) ??
+    allListings.find((l) => l.status === 'approved') ??
+    allListings[0] ??
+    null
+
+  const handleFeatureClick = () => {
+    if (featurableListing) {
+      router.push(`/listing/${featurableListing.id}/feature`)
+    } else {
+      router.push('/dashboard/listings')
+    }
+  }
+
   const STAT_CARDS = [
     { label: 'Total Listings', sub: 'All your properties', value: stats.total, icon: Home, color: 'bg-primary/10 text-primary' },
     { label: 'Published', sub: 'Live on EboHomes', value: stats.published, icon: CheckCircle2, color: 'bg-emerald-50 text-emerald-600' },
@@ -80,11 +97,11 @@ export default function DashboardOverview() {
   ]
 
   const QUICK_ACTIONS = [
-    { label: 'Add New Property', sub: 'List a new property', icon: Plus, href: '/list-property', color: 'bg-emerald-50 text-emerald-600' },
-    { label: 'Feature a Property', sub: 'Get more visibility', icon: Star, href: '/dashboard/listings', color: 'bg-amber-50 text-amber-500' },
-    { label: 'View My Listings', sub: 'Manage properties', icon: List, href: '/dashboard/listings', color: 'bg-blue-50 text-blue-600' },
-    { label: 'Messages', sub: 'View messages', icon: MessageCircle, href: '/dashboard/messages', color: 'bg-purple-50 text-purple-600' },
-    { label: 'Payments', sub: 'View transactions', icon: CreditCard, href: '/dashboard/payments', color: 'bg-primary/10 text-primary' },
+    { label: 'Add New Property', sub: 'List a new property', icon: Plus, href: '/list-property', action: undefined, color: 'bg-emerald-50 text-emerald-600' },
+    { label: 'Feature a Property', sub: 'Get more visibility', icon: Star, href: '', action: handleFeatureClick, color: 'bg-amber-50 text-amber-500' },
+    { label: 'View My Listings', sub: 'Manage properties', icon: List, href: '/dashboard/listings', action: undefined, color: 'bg-blue-50 text-blue-600' },
+    { label: 'Messages', sub: 'View messages', icon: MessageCircle, href: '/dashboard/messages', action: undefined, color: 'bg-purple-50 text-purple-600' },
+    { label: 'Payments', sub: 'View transactions', icon: CreditCard, href: '/dashboard/payments', action: undefined, color: 'bg-primary/10 text-primary' },
   ]
 
   return (
@@ -96,7 +113,6 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {STAT_CARDS.map((s) => (
           <div key={s.label} className="bg-card border border-border rounded-2xl p-4">
@@ -111,7 +127,6 @@ export default function DashboardOverview() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 mb-8">
-        {/* Recent Activity */}
         <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-foreground">Recent Activity</h2>
@@ -138,14 +153,13 @@ export default function DashboardOverview() {
           )}
         </div>
 
-        {/* Promote card */}
         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200 rounded-2xl p-5 flex flex-col">
           <h3 className="font-bold text-foreground mb-1.5">Promote Your Listings</h3>
           <p className="text-xs text-muted-foreground mb-4 flex-1">
             Feature your properties to get up to 5× more views and receive more enquiries from serious tenants.
           </p>
           <button
-            onClick={() => router.push('/dashboard/listings')}
+            onClick={handleFeatureClick}
             className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold rounded-full py-2.5"
           >
             Upgrade to Featured
@@ -153,14 +167,13 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div className="mb-8">
         <h2 className="font-bold text-foreground mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {QUICK_ACTIONS.map((a) => (
             <button
               key={a.label}
-              onClick={() => router.push(a.href)}
+              onClick={() => (a.action ? a.action() : router.push(a.href))}
               className="bg-card border border-border rounded-2xl p-4 text-left hover:border-primary/40 hover:shadow-sm transition-all"
             >
               <div className={`w-9 h-9 rounded-full flex items-center justify-center mb-3 ${a.color}`}>
@@ -173,7 +186,6 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Listings Requiring Attention */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-foreground">Listings Requiring Attention</h2>

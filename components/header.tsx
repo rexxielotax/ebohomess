@@ -20,13 +20,7 @@ export function Header() {
     const isDarkMode = document.documentElement.classList.contains('dark')
     setIsDark(isDarkMode)
 
-    const fetchRole = async () => {
-      const { data: userData } = await supabase.auth.getUser()
-      const userId = userData?.user?.id
-      if (!userId) return
-
-      setLoggedIn(true)
-
+    const fetchRole = async (userId: string) => {
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('role')
@@ -38,7 +32,29 @@ export function Header() {
       }
       setRole(profile?.role ?? null)
     }
-    fetchRole()
+
+    supabase.auth.getUser().then(({ data }) => {
+      const userId = data?.user?.id
+      if (userId) {
+        setLoggedIn(true)
+        fetchRole(userId)
+      } else {
+        setLoggedIn(false)
+        setRole(null)
+      }
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setLoggedIn(true)
+        fetchRole(session.user.id)
+      } else {
+        setLoggedIn(false)
+        setRole(null)
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const toggleDarkMode = () => {

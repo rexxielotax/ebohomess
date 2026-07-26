@@ -28,6 +28,11 @@ import {
   SearchCheck,
   Headphones,
   CheckCircle2,
+  Crown,
+  Eye,
+  Heart,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
@@ -71,6 +76,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
   const [stats, setStats] = useState({ properties: 0, landlords: 0 })
+  const [featuredIndex, setFeaturedIndex] = useState(0)
 
   const searchCardRef = useRef<HTMLDivElement>(null)
 
@@ -133,16 +139,17 @@ export default function HomePage() {
     fetchStats()
   }, [])
 
-const handleSearch = (e: React.FormEvent) => {
-  e.preventDefault()
-  const params = new URLSearchParams()
-  if (location) params.set('location', location)
-  if (propertyType) params.set('type', propertyType)
-  if (minPrice) params.set('minPrice', minPrice)
-  if (maxPrice) params.set('maxPrice', maxPrice)
-  params.set('mode', listingMode)
-  router.push('/search?' + params.toString())
-}
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    const params = new URLSearchParams()
+    if (location) params.set('location', location)
+    if (propertyType) params.set('type', propertyType)
+    if (minPrice) params.set('minPrice', minPrice)
+    if (maxPrice) params.set('maxPrice', maxPrice)
+    params.set('mode', listingMode)
+    router.push('/search?' + params.toString())
+  }
+
   const scrollToSearch = () => {
     searchCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
@@ -161,7 +168,6 @@ const handleSearch = (e: React.FormEvent) => {
     { icon: Headphones, label: '24/7 Support' },
   ]
 
-  
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -383,7 +389,7 @@ const handleSearch = (e: React.FormEvent) => {
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.value}
-              onClick={() => router.push('/search?type=' + encodeURIComponent(cat.value))}
+                onClick={() => router.push('/search?type=' + encodeURIComponent(cat.value))}
                 className="text-left bg-card border border-border rounded-xl p-5 hover:border-primary hover:shadow-md transition-all"
               >
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
@@ -398,103 +404,109 @@ const handleSearch = (e: React.FormEvent) => {
             ))}
           </div>
         </section>
-{/* How It Works */}
-<section id="how-it-works" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-  <div className="max-w-xl mb-12">
-    <span className="text-primary text-xs font-semibold tracking-wide uppercase">Getting started</span>
-    <h2 className="text-2xl md:text-4xl font-bold text-foreground mt-2">
-      From search to move in, <span className="text-primary">four steps</span>
-    </h2>
-  </div>
 
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-14">
-    {steps.map((step) => (
-      <div key={step.n}>
-        <p className="text-4xl md:text-5xl font-extrabold text-primary/15 mb-1 leading-none">0{step.n}</p>
-        <step.icon size={20} className="text-primary mb-3" />
-        <p className="font-semibold text-foreground mb-1">{step.title}</p>
-        <p className="text-muted-foreground text-xs md:text-sm">{step.desc}</p>
-      </div>
-    ))}
-  </div>
+        {/* How It Works */}
+        <section id="how-it-works" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="max-w-xl mb-12">
+            <span className="text-primary text-xs font-semibold tracking-wide uppercase">Getting started</span>
+            <h2 className="text-2xl md:text-4xl font-bold text-foreground mt-2">
+              From search to move in, <span className="text-primary">four steps</span>
+            </h2>
+          </div>
 
-  <div className="bg-secondary/40 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
-    <ShieldCheck size={32} className="text-primary shrink-0" />
-    <div className="flex-1 text-center md:text-left">
-      <h3 className="text-lg font-bold text-foreground mb-1">Safe. Simple. Stress-free.</h3>
-      <p className="text-muted-foreground text-sm">
-        We verify landlords, secure your information, and make sure your home search experience is smooth from start to finish.
-      </p>
-    </div>
-    <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 shrink-0">
-      {TRUST_MINI.map((t) => (
-        <span key={t.label} className="text-xs font-medium text-foreground">{t.label}</span>
-      ))}
-    </div>
-  </div>
-</section>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-14">
+            {steps.map((step) => (
+              <div key={step.n}>
+                <p className="text-4xl md:text-5xl font-extrabold text-primary/15 mb-1 leading-none">0{step.n}</p>
+                <step.icon size={20} className="text-primary mb-3" />
+                <p className="font-semibold text-foreground mb-1">{step.title}</p>
+                <p className="text-muted-foreground text-xs md:text-sm">{step.desc}</p>
+              </div>
+            ))}
+          </div>
 
-      {/* Why Choose EboHomes */}
-<section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-  <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-    <div className="relative">
-      <img
-        src="/hero.jpg"
-        alt="Verified home in Ebonyi State"
-        className="rounded-2xl object-cover w-full h-[380px] md:h-[440px]"
-      />
-      <div className="absolute -bottom-6 -right-4 sm:-right-6 bg-card border border-border rounded-xl px-5 py-4 shadow-lg">
-        <p className="text-2xl font-extrabold text-foreground">{stats.landlords}+</p>
-        <p className="text-xs text-muted-foreground max-w-[140px]">Verified landlords ready to rent to you</p>
-      </div>
-    </div>
-
-    <div>
-      <span className="text-primary text-xs font-semibold tracking-wide uppercase">Our promise</span>
-      <h2 className="text-2xl md:text-4xl font-bold text-foreground mt-2 mb-4">
-        Why trust <span className="text-primary">EboHomes?</span>
-      </h2>
-      <p className="text-muted-foreground text-sm mb-8 max-w-md">
-        We built EboHomes because finding a home in Ebonyi State shouldn't mean risking a scam. Here's what that actually means for you.
-      </p>
-      <ul className="space-y-5">
-        {WHY_CHOOSE.map((item) => (
-          <li key={item.title} className="flex gap-3">
-            <CheckCircle2 size={20} className="text-primary shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-foreground text-sm">{item.title}</p>
-              <p className="text-muted-foreground text-sm">{item.desc}</p>
+          <div className="bg-secondary/40 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
+            <ShieldCheck size={32} className="text-primary shrink-0" />
+            <div className="flex-1 text-center md:text-left">
+              <h3 className="text-lg font-bold text-foreground mb-1">Safe. Simple. Stress-free.</h3>
+              <p className="text-muted-foreground text-sm">
+                We verify landlords, secure your information, and make sure your home search experience is smooth from start to finish.
+              </p>
             </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  </div>
-</section>
-          
-            
-        {/* Partner Universities */}
+            <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 shrink-0">
+              {TRUST_MINI.map((t) => (
+                <span key={t.label} className="text-xs font-medium text-foreground">{t.label}</span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Why Choose EboHomes */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div className="relative">
+              <img
+                src="/hero.jpg"
+                alt="Verified home in Ebonyi State"
+                className="rounded-2xl object-cover w-full h-[380px] md:h-[440px]"
+              />
+              <div className="absolute -bottom-6 -right-4 sm:-right-6 bg-card border border-border rounded-xl px-5 py-4 shadow-lg">
+                <p className="text-2xl font-extrabold text-foreground">{stats.landlords}+</p>
+                <p className="text-xs text-muted-foreground max-w-[140px]">Verified landlords ready to rent to you</p>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-primary text-xs font-semibold tracking-wide uppercase">Our promise</span>
+              <h2 className="text-2xl md:text-4xl font-bold text-foreground mt-2 mb-4">
+                Why trust <span className="text-primary">EboHomes?</span>
+              </h2>
+              <p className="text-muted-foreground text-sm mb-8 max-w-md">
+                We built EboHomes because finding a home in Ebonyi State shouldn't mean risking a scam. Here's what that actually means for you.
+              </p>
+              <ul className="space-y-5">
+                {WHY_CHOOSE.map((item) => (
+                  <li key={item.title} className="flex gap-3">
+                    <CheckCircle2 size={20} className="text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-foreground text-sm">{item.title}</p>
+                      <p className="text-muted-foreground text-sm">{item.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* Trusted by Students & Professionals */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="bg-secondary/40 rounded-2xl p-6 md:p-8 text-center">
-            <h3 className="font-bold text-foreground mb-1">Popular With Students & Professionals</h3>
-            <p className="text-muted-foreground text-sm mb-6">Many of our users are students and staff from schools like:</p>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-5 py-3">
-                <img src="/ebsu-logo.png" alt="EBSU" className="h-10 w-10 object-contain" />
+          <div className="bg-card rounded-3xl shadow-lg border border-border/60 p-8 md:p-12 text-center">
+            <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2">Trusted by Students & Professionals</h3>
+            <p className="text-muted-foreground text-sm mb-9 max-w-md mx-auto">
+              We are proud to serve students and staff from leading institutions in Ebonyi State.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-14">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-secondary/40 flex items-center justify-center p-1.5 shrink-0">
+                  <img src="/ebsu-logo.png" alt="EBSU" className="h-full w-full object-contain" />
+                </div>
                 <div className="text-left">
-                  <p className="text-sm font-semibold text-foreground">EBSU</p>
+                  <p className="font-bold text-primary text-base">EBSU</p>
                   <p className="text-xs text-muted-foreground">Ebonyi State University</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-5 py-3">
-                <img src="/funai-logo.png" alt="FUNAI" className="h-10 w-10 object-contain" />
+
+              <div className="hidden sm:block w-px h-10 bg-gradient-to-b from-transparent via-border to-transparent" />
+
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-secondary/40 flex items-center justify-center p-1.5 shrink-0">
+                  <img src="/funai-logo.png" alt="FUNAI" className="h-full w-full object-contain" />
+                </div>
                 <div className="text-left">
-                  <p className="text-sm font-semibold text-foreground">FUNAI</p>
+                  <p className="font-bold text-primary text-base">FUNAI</p>
                   <p className="text-xs text-muted-foreground">Alex Ekwueme Federal University</p>
                 </div>
-              </div>
-              <div className="bg-card border border-border rounded-xl px-5 py-3 text-sm font-semibold text-muted-foreground">
-                More Coming Soon
               </div>
             </div>
           </div>
@@ -518,34 +530,172 @@ const handleSearch = (e: React.FormEvent) => {
             </div>
           </div>
         </section>
-      </main>
 
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
-  <div className="bg-primary rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-5 text-primary-foreground">
-    <div className="flex items-center gap-4">
-      <div className="w-14 h-14 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0 text-2xl">
-        👑
-      </div>
+     {/* Featured Upgrade Banner with Carousel */}
+<section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-primary to-emerald-900 shadow-2xl">
+    <div className="absolute top-0 right-0 w-96 h-96 bg-amber-400/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3" />
+    <div className="absolute bottom-0 left-0 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3" />
+    <div
+      className="absolute inset-0 opacity-[0.07]"
+      style={{
+        backgroundImage: 'radial-gradient(circle, #fbbf24 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+      }}
+    />
+
+    <div className="relative z-10 grid md:grid-cols-2 gap-10 md:gap-12 items-center p-8 md:p-14">
       <div>
-        <h3 className="text-lg md:text-xl font-bold mb-1">
-          List Your Property as <span className="text-amber-400">Featured</span>
+        <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md border border-amber-400/30 text-amber-300 text-xs font-bold px-4 py-1.5 rounded-full mb-6 tracking-wide">
+          <Crown size={13} className="text-amber-400" />
+          FEATURED LISTING
+        </span>
+
+        <h3 className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-4">
+          List Your Property as{' '}
+          <span className="bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent">
+            Featured
+          </span>
         </h3>
-        <p className="text-primary-foreground/80 text-sm max-w-md">
+
+        <p className="text-white/70 text-sm md:text-base mb-6 max-w-sm leading-relaxed">
           Increase visibility, get more inquiries, and close deals faster by upgrading to a Featured Listing.
         </p>
+
+        <div className="inline-flex items-center gap-2.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-3 mb-7">
+          <div className="w-8 h-8 rounded-full bg-amber-400/15 flex items-center justify-center shrink-0">
+            <Eye size={15} className="text-amber-400" />
+          </div>
+          <p className="text-xs md:text-sm text-white/90">
+            Featured listings get up to <span className="font-bold text-amber-400">5× more views</span>
+          </p>
+        </div>
+
+        <Button
+          onClick={() => router.push(featured.length > 0 ? `/listing/${featured[featuredIndex].id}/feature` : '/dashboard/listings')}
+          className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-amber-950 font-bold px-7 py-6 rounded-full shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 hover:scale-[1.03] transition-all duration-300"
+        >
+          Upgrade to Featured
+          <ChevronRight size={18} className="ml-1" />
+        </Button>
+      </div>
+
+      <div className="relative">
+        {featured.length > 0 && (
+          <div className="relative bg-white rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 transition-transform duration-500">
+            <div className="relative h-52 md:h-60">
+              <img
+                src={featured[featuredIndex]?.photos?.[0] ?? '/hero.jpg'}
+                alt={featured[featuredIndex]?.property_type ?? 'Featured property'}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+              <span className="absolute top-3.5 left-3.5 bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 text-xs font-bold px-3 py-1.5 rounded-full shadow">
+                Featured
+              </span>
+              <button
+                aria-label="Save property"
+                className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center shadow hover:bg-white hover:scale-110 transition-all duration-200"
+              >
+                <Heart size={16} className="text-foreground" />
+              </button>
+            </div>
+
+            <div className="p-5">
+              <p className="text-xl font-extrabold text-primary mb-1.5">
+                ₦{featured[featuredIndex]?.price_monthly?.toLocaleString()}
+                <span className="text-sm font-medium text-muted-foreground">/month</span>
+              </p>
+              <p className="text-sm text-muted-foreground flex items-center gap-1 mb-3">
+                <MapPin size={13} />
+                {featured[featuredIndex]?.location_text}
+              </p>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground border-t border-border pt-3">
+                <span className="flex items-center gap-1.5">
+                  <HomeIcon size={13} /> {featured[featuredIndex]?.property_type}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Bed size={13} /> {featured[featuredIndex]?.bedrooms} Beds
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {featured.length > 1 && (
+          <>
+            <button
+              aria-label="Previous featured property"
+              onClick={() => setFeaturedIndex((i) => (i - 1 + featured.length) % featured.length)}
+              className="absolute top-1/2 -translate-y-1/2 -left-4 md:-left-5 w-10 h-10 rounded-full bg-white/95 backdrop-blur-md shadow-lg flex items-center justify-center hover:bg-white hover:scale-110 transition-all duration-200"
+            >
+              <ChevronLeft size={18} className="text-foreground" />
+            </button>
+            <button
+              aria-label="Next featured property"
+              onClick={() => setFeaturedIndex((i) => (i + 1) % featured.length)}
+              className="absolute top-1/2 -translate-y-1/2 -right-4 md:-right-5 w-10 h-10 rounded-full bg-white/95 backdrop-blur-md shadow-lg flex items-center justify-center hover:bg-white hover:scale-110 transition-all duration-200"
+            >
+              <ChevronRight size={18} className="text-foreground" />
+            </button>
+
+            <div className="flex justify-center gap-1.5 mt-5">
+              {featured.map((_, i) => (
+                <button
+                  key={i}
+                  aria-label={`Go to featured property ${i + 1}`}
+                  onClick={() => setFeaturedIndex(i)}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    i === featuredIndex
+                      ? 'bg-gradient-to-r from-amber-300 to-amber-500 w-7'
+                      : 'bg-white/30 w-1.5 hover:bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
-    <Button
-      onClick={() => router.push('/dashboard/listings')}
-      className="bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold px-6 py-3 rounded-full whitespace-nowrap"
-    >
-      Upgrade to Featured →
-    </Button>
   </div>
 </section>
+
+        {/* Ready to Get Started */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+          <div className="relative overflow-hidden bg-gradient-to-br from-secondary/60 to-secondary/20 border border-border/60 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-emerald-700 flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+              <Home size={28} className="text-white" />
+            </div>
+
+            <div className="flex-1 text-center md:text-left">
+              <h3 className="text-xl md:text-2xl font-bold text-foreground mb-1.5">Ready to get started?</h3>
+              <p className="text-muted-foreground text-sm md:text-base">
+                List your property or explore verified properties across Ebonyi State.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full md:w-auto">
+              <Button
+                onClick={() => router.push('/list-property')}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-full px-7 py-6 shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300"
+              >
+                <Home size={16} className="mr-2" />
+                List Your Property
+              </Button>
+              <Button
+                onClick={() => router.push('/search')}
+                variant="outline"
+                className="border-primary/40 text-primary hover:bg-primary/5 hover:border-primary font-semibold rounded-full px-7 py-6 hover:scale-[1.02] transition-all duration-300"
+              >
+                <Search size={16} className="mr-2" />
+                Browse Properties
+              </Button>
+            </div>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>
   )
 }
-
